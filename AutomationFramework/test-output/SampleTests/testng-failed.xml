@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite guice-stage="DEVELOPMENT" name="Failed suite [SampleTests]">
+  <parameter name="password" value="PleaseChange"/>
+  <parameter name="login" value="borrower"/>
+  <listeners>
+    <listener class-name="com.inflectra.spiratest.addons.testnglistener.SpiraTestListener"/>
+  </listeners>
+  <test name="SimpleTest(failed)">
+    <groups>
+      <run>
+        <include name="unittest"/>
+        <exclude name="seleniumtest"/>
+      </run>
+    </groups>
+    <classes>
+      <class name="com.inflectra.spiratest.addons.testnglistener.samples.SimpleTest">
+        <methods>
+          <include name="testParameters" invocation-numbers="0"/>
+          <include name="testAdd"/>
+          <include name="testDivideByZero"/>
+          <include name="setUp"/>
+          <include name="testEquals"/>
+        </methods>
+      </class> <!-- com.inflectra.spiratest.addons.testnglistener.samples.SimpleTest -->
+    </classes>
+  </test> <!-- SimpleTest(failed) -->
+</suite> <!-- Failed suite [SampleTests] -->

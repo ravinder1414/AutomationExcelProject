@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results skipped="0" failed="0" total="1" passed="1">
+  <reporter-output>
+  </reporter-output>
+  <suite name="IgniteSuite" duration-ms="49276" started-at="2016-06-17T09:59:54Z" finished-at="2016-06-17T10:00:43Z">
+    <groups>
+    </groups>
+    <test name="IgniteTest" duration-ms="49276" started-at="2016-06-17T09:59:54Z" finished-at="2016-06-17T10:00:43Z">
+      <class name="automationFramework.FrameworkDriver">
+        <test-method status="PASS" signature="beforeSuite()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="beforeSuite" is-config="true" duration-ms="100" started-at="2016-06-17T15:29:54Z" finished-at="2016-06-17T15:29:54Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- beforeSuite -->
+        <test-method status="PASS" signature="loadLocally(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String)[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="loadLocally" is-config="true" duration-ms="2" started-at="2016-06-17T15:29:54Z" finished-at="2016-06-17T15:29:54Z">
+          <params>
+            <param index="0">
+              <value>
+                <![CDATA[75]]>
+              </value>
+            </param>
+            <param index="1">
+              <value>
+                <![CDATA[135]]>
+              </value>
+            </param>
+            <param index="2">
+              <value>
+                <![CDATA[230]]>
+              </value>
+            </param>
+            <param index="3">
+              <value>
+                <![CDATA[23098]]>
+              </value>
+            </param>
+            <param index="4">
+              <value>
+                <![CDATA[C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Testtest.xlsx]]>
+              </value>
+            </param>
+            <param index="5">
+              <value>
+                <![CDATA[false]]>
+              </value>
+            </param>
+          </params>
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- loadLocally -->
+        <test-method status="PASS" signature="init()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="init" is-config="true" duration-ms="1067" started-at="2016-06-17T15:29:54Z" finished-at="2016-06-17T15:29:55Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- init -->
+        <test-method status="PASS" signature="StartTest()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="StartTest" duration-ms="48194" started-at="2016-06-17T15:29:55Z" finished-at="2016-06-17T15:30:43Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- StartTest -->
+        <test-method status="PASS" signature="afterMethod()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="afterMethod" is-config="true" duration-ms="1" started-at="2016-06-17T15:30:43Z" finished-at="2016-06-17T15:30:43Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- afterMethod -->
+        <test-method status="PASS" signature="tearDown()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="tearDown" is-config="true" duration-ms="604" started-at="2016-06-17T15:30:43Z" finished-at="2016-06-17T15:30:44Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- tearDown -->
+      </class> <!-- automationFramework.FrameworkDriver -->
+    </test> <!-- IgniteTest -->
+  </suite> <!-- IgniteSuite -->
+</testng-results>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Failed suite [IgniteSuite]">
+  <parameter name="TestSetID" value="230"/>
+  <parameter name="Integration" value="false"/>
+  <parameter name="ProjectID" value="75"/>
+  <parameter name="TestCaseID" value="23098"/>
+  <parameter name="TestRunPath" value="C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Testtest.xlsx"/>
+  <parameter name="ReleaseID" value="135"/>
+  <test name="IgniteTest(failed)">
+    <parameter name="TestSetID" value="230"/>
+    <parameter name="Integration" value="false"/>
+    <parameter name="ProjectID" value="75"/>
+    <parameter name="TestCaseID" value="23098"/>
+    <parameter name="TestRunPath" value="C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Testtest.xlsx"/>
+    <parameter name="ReleaseID" value="135"/>
+    <classes>
+      <class name="automationFramework.FrameworkDriver">
+        <methods>
+          <include name="StartTest"/>
+          <include name="tearDown"/>
+          <include name="afterMethod"/>
+          <include name="loadLocally"/>
+          <include name="beforeSuite"/>
+          <include name="init"/>
+        </methods>
+      </class> <!-- automationFramework.FrameworkDriver -->
+    </classes>
+  </test> <!-- IgniteTest(failed) -->
+</suite> <!-- Failed suite [IgniteSuite] -->

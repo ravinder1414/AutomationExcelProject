@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Failed suite [SimpleTestsuite]">
+  <listeners>
+    <listener class-name="com.inflectra.spiratest.addons.testnglistener.SpiraTestListener"/>
+  </listeners>
+  <test name="SimpleTest(failed)">
+    <classes>
+      <class name="com.inflectra.spiratest.addons.testnglistener.samples.SimpleTest">
+        <methods>
+          <include name="testParameters"/>
+          <include name="testAdd"/>
+          <include name="testDivideByZero"/>
+          <include name="setUp"/>
+          <include name="testEquals"/>
+        </methods>
+      </class> <!-- com.inflectra.spiratest.addons.testnglistener.samples.SimpleTest -->
+    </classes>
+  </test> <!-- SimpleTest(failed) -->
+</suite> <!-- Failed suite [SimpleTestsuite] -->
