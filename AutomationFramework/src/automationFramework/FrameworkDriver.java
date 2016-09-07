@@ -25,6 +25,12 @@ package automationFramework;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 //Import Package Log4j.*
 import org.apache.log4j.xml.DOMConfigurator;
 import org.testng.annotations.AfterMethod;
@@ -38,6 +44,7 @@ import org.testng.annotations.Test;
 import ObjectMap.OR;
 import SpiraTest.SpiraReader;
 import utility.BrowserFactory;
+import utility.Constant;
 import utility.ExcelUtils;
 import utility.Log;
 import utility.Utils;
@@ -45,23 +52,15 @@ import utility.Utils;
 public class FrameworkDriver
 {
 	LocalTC Vars;
-	//TranslateEngine Translate;
 	SpiraReader SpiraRead;
 	int rowCountBw = 0;
 	int rowCount = 0;
-	/*	public void FrameworkDriver() throws NoSuchMethodException, SecurityException{
-		actionKeywords = new ActionKeywords();
-		method = actionKeywords.getClass().getMethods();	
-	}*/
 
 	/****************************This function is called by TestNG at the start of the test suite
 	 * @throws MalformedURLException ***********************/
 	@BeforeSuite
 	public void beforeSuite() throws MalformedURLException {
-		//Provide Log4j configuration settings
-		DOMConfigurator.configure("log4j.xml");
 		Log.info("beforeSuite : Strating Project Test Execution" );
-		System.out.println("beforeSuite : Strating Project Test Execution");
 		SpiraRead = new SpiraReader();
 	}
 
@@ -73,10 +72,13 @@ public class FrameworkDriver
 	{
 		Vars = new LocalTC(ProjectID,ReleaseID,TestSetID,TestCaseID,TestRunPath,Integration);
 		Log.info("loadLocally : Running test for Project ID " +  Vars.getProjectID());
-		System.out.println("loadLocally : Starting test Suite for Project ID " +  ProjectID);
-		Log.startTestCase("loadLocally : Starting to execute Test Set " + TestSetID + " and Test Case " + TestCaseID);
+		if (Vars.getIntegration() == false)
+			Log.startTestSet("loadLocally : Starting to execute Test Set " + TestSetID + " and Test Case " + TestCaseID);
 	}
-
+	/****************************Initiate the 
+	 * 
+	 * @throws Exception
+	 */
 	@BeforeMethod //initiate the browser of a particular type (ie/firefox/chrome)
 	public void init() throws Exception
 	{		
@@ -87,11 +89,9 @@ public class FrameworkDriver
 			//Create test run for the test set this has to be called for each set in release
 			//SpiraRead.CreateTestRun(Vars);  
 			Vars.TestRun.setExcelFile(Vars.getTestRunPath(),"Test Runs");
-			System.out.println("init : test case excel opened");
-			Log.info("init: Excel sheet opened");
-			System.out.println("init: It is start of test execution");
+			Log.info("init : test case excel opened");
+			Log.info("init: It is start of test execution");
 		}
-		Log.startTestSet("init : Start of Test Set "+ Vars.getTestSetID());
 		Vars.obj =new OR("ObjectRepository/OR.Properties");
 		if (Vars.getIntegration() == true){
 			//Create test run for the test set this has to be called for each set in release
@@ -104,97 +104,98 @@ public class FrameworkDriver
 	{
 		//if set to false open the excel file from TestRunPath sample added in TestData package
 		//loop through the excel or SpiraTest for all the test cases in the given Set
-		KeywordLibrary.CreateReport(Vars,"s");
-		int prevtestcaseid = 0;
-		String TestCaseStatus = "Passed";
-		String strTextTemp ="";
+		//KeywordLibrary.CreateReport(Vars,"s");
+		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		Vars.setExecutionStartTime(dateFormat.format(new Date()));
+		ReporterSummaryObject reportSumObj = null;
 		if(Vars.getIntegration()==false)
 		{
-			Vars.TestRun.setExcelFile(Vars.getTestRunPath(), "Test Runs");
-			Log.info("StartTest : Test Run Excel sheet opened");
+			/*Vars.TestRun.setExcelFile(Vars.getTestRunPath(), "Test Runs");
+			Log.info("StartTest : Test Run Excel sheet opened");*/
 			int retRowCount=Vars.TestRun.getRowCount();
+			//Loop through all rows test step, expected, test step id and sample data from excel and
 			for(int rowItr=2;rowItr<retRowCount;rowItr++)
-			{   //Reading test step, expected, test step id and sample data from excel and 
+			{    
 				//Reset execution result
-				Vars.row = rowItr;
+				Vars.row = rowItr-2;
+				if(Vars.testcasestart !=0 && null != Vars.TestRun.getCellData(rowItr, 1) && !Vars.TestRun.getCellData(rowItr, 1).isEmpty()){
+					Vars.reporterSumObjList.add(reportSumObj);
+				}
 				if(null != Vars.TestRun.getCellData(rowItr, 1) && !Vars.TestRun.getCellData(rowItr, 1).isEmpty()){
+					reportSumObj = new ReporterSummaryObject();
 					if(Vars.bw != null)
 					{	
-						Vars.bw.close();
-						for(int tcid=prevtestcaseid+1;tcid<rowItr;tcid++)
+						Vars.conditionSkip = false;
+						if(Vars.loopflag == 1)
 						{
-							if(Vars.TestRun.getCellData(tcid, 9) != "Passed" && TestCaseStatus != "Failed" ){
-								TestCaseStatus = Vars.TestRun.getCellData(tcid, 9);
-							}
+							Vars.loopflag =0;
+							KeywordAction.endloop(Vars);
 						}
+						Vars.bw.close();
+						//Reporter.ReportEvent(Vars);
+						Log.endTestCase("End of Test Case : " + Vars.getTestCaseName());
 					}
+					Vars.setExecutionCount(rowItr-1);
+					Vars.testcasestart = rowItr;
+					Vars.setTestCaseID(Vars.TestRun.getNumaricCellData(rowItr, 0));
 					Vars.setTestCaseName(Vars.TestRun.getCellData(rowItr, 1));
 					Vars.setResultStatus(Vars.TestRun.getCellData(rowItr, 9));
-					Log.startTestCase("StartTest " + Vars.getTestCaseName());
-					if(rowCountBw != 0){
-						for(int i=0; i<Vars.ResultsStatus.size(); i++){
-							if(Vars.ResultsStatus.get(i).equals("Passed")){
-								//bFlag = true;
-								Vars.setResultStatus("Passed");
-								continue;
-							}else{
-								//bFlag = false;
-								Vars.setResultStatus("Failed");
-								break;
-							}
-								
-						}
-						//UpdateSheet(rowCountBw, 9, Vars);
+					Log.startTestCase("Start of Test Case "+ Vars.getTestCaseName());
+					Vars.setTestCaseStatus("Passed");
+					//storing the object of report into arraylist for summary report
+					reportSumObj.setReportSummaryTestCaseID(Vars.getTestCaseID());
+					reportSumObj.setReportSummaryTestCaseName(Vars.getTestCaseName());
+				}
+				else {
+					if(null != Vars.TestRun.getCellData(rowItr, 6) && !Vars.TestRun.getCellData(rowItr, 6).isEmpty()){
+						//Reading one row of excel for Step, Expected, Test StepID, Sample Data
+						Vars.setTestStep (Utils.htmlToTextConvertMethod(Vars.TestRun.getCellData(rowItr, 6)));
+						if(null != Vars.TestRun.getCellData(rowItr, 7) && !Vars.TestRun.getCellData(rowItr, 7).isEmpty())
+							Vars.setExpected(Utils.htmlToTextConvertMethod(Vars.TestRun.getCellData(rowItr, 7)));
+						else
+							Vars.setExpected("");
+						Vars.setTestStepID(Vars.TestRun.getNumaricCellData(rowItr,5));
+						Vars.setSampleData(Vars.TestRun.getCellData(rowItr,8));
+						Vars.setExecutionResult("");
+						KeywordLibrary.ReadTest(Vars); //Execute all actions in a test step
+						reportSumObj.setReportSummaryTestCaseStatus(Vars.getTestCaseStatus());
+						ExcelUtils.updateExcellSheet(Constant.Vars);
 					}
-					rowCountBw = rowItr;
-					KeywordLibrary.CreateReport(Vars,"d");
-					Log.endTestCase("StartTest: " + Vars.getTestCaseName());
-					//set testcase status in excel column 9 of row prevtestcaseid
-					prevtestcaseid = rowItr;
 				}
-				else if (Vars.getTestCaseID() == Vars.TestRun.getNumaricCellData(rowItr, 0))
-				{
-					//Reading one row of excel for Step, Expected, Test StepID, Sample Data
-					strTextTemp = Vars.TestRun.getCellData(rowItr, 6);
-					String htmlToTextConvert = Utils.htmlToTextConvertMethod(strTextTemp);
-					Vars.setTestStep (htmlToTextConvert);
-					Vars.setExpected(Vars.TestRun.getCellData(rowItr, 7));
-					Vars.setTestStepID(Vars.TestRun.getNumaricCellData(rowItr,5));
-					Vars.setSampleData(Vars.TestRun.getCellData(rowItr,8));
-					Vars.setExecutionResult("");
-					KeywordLibrary.ReadTest(Vars); //Execute all actions in a test step 
-				}
-						//set actualresult in excel
-						//set teststep status as well
-			}	
-			
+				
+			}
+			Vars.reporterSumObjList.add(reportSumObj);
+			if(Vars.loopflag == 1)
+			{
+				Vars.loopflag =0;
+				KeywordAction.endloop(Vars);
+			}
+			//Reporter.ReportEvent(Vars);
+			DateFormat dateFormatEndTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			Constant.Vars.setExecutionEndTime(dateFormatEndTime.format(new Date()));
+			Vars.conditionSkip = false;
+			Log.endTestCase("End of Test Case : " + Vars.getTestCaseName());
 		}
 		if (Vars.getIntegration()==true) {
-			System.out.println(" StartTest : calling  getIntegration " + Vars.getIntegration());
-			//Extract all TestSetID linked to a releaseID
-			//Loop 1: Loop on all Test Set ID 
-			//Extract which browse and url to use for testing
-			SpiraRead.CreateTestRun(Vars);
-			SpiraRead.ExtractTestSetinProject(Vars);
-			//SpiraRead.ExtractTestCases(Vars);
-			//Extract all TestCaseID linked to a TestSetID
-			//Loop 2: Loop on all TestCaseID
-			//Extract all TestStep in a TestCaseID and execute those steps
-			//SpiraRead.ExtractTestSteps(Vars,Translate); 
-			System.out.println("StartTest : calling Reader function ");
+			Log.info(" StartTest : calling  getIntegration " + Vars.getIntegration());
+			Log.info("StartTest : calling Reader function ");
+			SpiraRead.ExtractRelease(Vars);
+			DateFormat dateFormatEndTime = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+			Constant.Vars.setExecutionEndTime(dateFormatEndTime.format(new Date()));
+			/*Reporter.generateReport(Vars);*/
+			//KeywordLibrary.Endreport(Vars);
 		}
 	}
 
 	@AfterMethod
 	public void afterMethod() throws IOException {
-		Log.endTestCase("Finishing Test Case ID ");
-		System.out.println("Test has been completed");
-		KeywordLibrary.Endreport(Vars);
+		Reporter.generateReport(Vars);
+		Vars.bw1.close();
 		Log.endTestSet("Ending TestSet " + Vars.getTestSetID());
 	}
 
 	@AfterSuite
-	public void tearDown()
+	public void tearDown() throws IOException
 	{
 		BrowserFactory.closeAllDriver();
 		Log.info("Browser closed");

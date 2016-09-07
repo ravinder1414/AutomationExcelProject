@@ -22,7 +22,7 @@
 	<classpathentry kind="lib" path="Libs/Selenium/junit-4.12.jar"/>
 	<classpathentry kind="lib" path="Libs/Selenium/netty-3.5.7.Final.jar"/>
 	<classpathentry kind="lib" path="Libs/Selenium/phantomjsdriver-1.2.1.jar"/>
-	<classpathentry kind="lib" path="Libs/Selenium/selenium-java-2.53.0.jar"/>
+	<classpathentry kind="lib" path="Libs/Selenium/selenium-java-2.53.0.jar" sourcepath="Libs/Selenium/selenium-java-2.53.0.jar"/>
 	<classpathentry kind="lib" path="Libs/poi/curvesapi-1.03.jar"/>
 	<classpathentry kind="lib" path="Libs/poi/log4j-1.2.17.jar"/>
 	<classpathentry kind="lib" path="Libs/poi/poi-3.14-20160307.jar"/>
@@ -103,11 +103,16 @@
 	<classpathentry kind="con" path="org.testng.TESTNG_CONTAINER"/>
 	<classpathentry kind="lib" path="Libs/TestNGListener.jar"/>
 	<classpathentry kind="lib" path="Libs/jsoup-1.9.2.jar"/>
+	<classpathentry kind="lib" path="Libs/fontbox-2.0.2.jar"/>
+	<classpathentry kind="lib" path="Libs/pdfbox-2.0.2.jar"/>
 	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/axis.jar"/>
 	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/commons-discovery-0.2.jar"/>
 	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/javax.wsdl_1.6.2.v201005080631.jar"/>
 	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/jaxrpc.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/jcommander.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/jettison-1.2.jar"/>
 	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/org.apache.commons.logging-1.1.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/saaj.jar"/>
+	<classpathentry kind="lib" path="C:/Users/ravinder.kumar/git/automationframework/AutomationFramework/Libs/testng-6.8.5.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
 <suite name="Failed suite [IgniteSuite]">
-  <parameter name="TestSetID" value="230"/>
+  <parameter name="TestSetID" value="C:\\temp\\Report"/>
   <parameter name="Integration" value="false"/>
-  <parameter name="ProjectID" value="75"/>
-  <parameter name="TestCaseID" value="23098"/>
-  <parameter name="TestRunPath" value="C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Testtest.xlsx"/>
-  <parameter name="ReleaseID" value="135"/>
+  <parameter name="ProjectID" value="30"/>
+  <parameter name="TestCaseID" value="23097"/>
+  <parameter name="TestRunPath" value="C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Reports_Cancelled_Interviews_6.xlsx"/>
+  <parameter name="ReleaseID" value="1031"/>
   <test name="IgniteTest(failed)">
-    <parameter name="TestSetID" value="230"/>
+    <parameter name="TestSetID" value="C:\\temp\\Report"/>
     <parameter name="Integration" value="false"/>
-    <parameter name="ProjectID" value="75"/>
-    <parameter name="TestCaseID" value="23098"/>
-    <parameter name="TestRunPath" value="C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Testtest.xlsx"/>
-    <parameter name="ReleaseID" value="135"/>
+    <parameter name="ProjectID" value="30"/>
+    <parameter name="TestCaseID" value="23097"/>
+    <parameter name="TestRunPath" value="C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Reports_Cancelled_Interviews_6.xlsx"/>
+    <parameter name="ReleaseID" value="1031"/>
     <classes>
       <class name="automationFramework.FrameworkDriver">
         <methods>

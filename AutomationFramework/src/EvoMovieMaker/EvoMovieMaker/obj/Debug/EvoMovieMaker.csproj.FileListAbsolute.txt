@@ -1,0 +1,8 @@
+D:\Development\EvoAutomation\EvoMovieMaker\EvoMovieMaker\bin\Debug\EvoMovieMaker.exe.config
+D:\Development\EvoAutomation\EvoMovieMaker\EvoMovieMaker\bin\Debug\EvoMovieMaker.exe
+D:\Development\EvoAutomation\EvoMovieMaker\EvoMovieMaker\bin\Debug\EvoMovieMaker.pdb
+D:\Development\EvoAutomation\EvoMovieMaker\EvoMovieMaker\bin\Debug\AForge.Video.dll
+D:\Development\EvoAutomation\EvoMovieMaker\EvoMovieMaker\bin\Debug\AForge.Video.xml
+D:\Development\EvoAutomation\EvoMovieMaker\EvoMovieMaker\obj\Debug\EvoMovieMaker.csprojResolveAssemblyReference.cache
+D:\Development\EvoAutomation\EvoMovieMaker\EvoMovieMaker\obj\Debug\EvoMovieMaker.exe
+D:\Development\EvoAutomation\EvoMovieMaker\EvoMovieMaker\obj\Debug\EvoMovieMaker.pdb

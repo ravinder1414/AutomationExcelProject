@@ -1,8 +1,10 @@
 package utility;
 
 import java.io.BufferedWriter;
+import java.util.Map;
 
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.interactions.Actions;
 
 import automationFramework.LocalTC;
 
@@ -11,10 +13,13 @@ public class Constant
 	//TestSuite, TestScript, ObjectRepository, Summary Report, Screenshot Report, Browser Type, ieDriverPath,
 	//TempTetsreortpath,Filemanager,database,host_name,portnumber,schemaname,username,password
 	//update,execpath,reusableComponents,
-	public static final String URL = "https://test.salesforce.com/";
+	public static final String URL = "https://cms6.test.evolution-system.com/Home";
 	public static final String Username = "bharat.sethi@impellam.com.regression";//"bhtestemail15@impellam.com";
 	public static final String Password = "Clarity1";//"Pa55w0rd1";
-	public static final String Path_TestData = "C://Temp//IgniteTestData.xlsx";
+	public static final String BS_USERNAME = "itqatestteamluto1";
+	public static final String BS_AUTOMATE_KEY = "z8Gk8sYLwxuqZsDNRKKW";
+	public static final String BS_URL = "https://" + BS_USERNAME + ":" + BS_AUTOMATE_KEY + "@hub-cloud.browserstack.com/wd/hub";
+	public static String Path_TestData = "IgniteTestData.xlsx";
 	public static final String File_TestData = "IgniteTestData.xlsx";
 	public static final String ServiceUser = "?username=bharat.sethi&api-key={D6DAC12E-189E-4BDC-A1F3-3F2EC3CFCB3A}";
 	public static final String ProjectDetail = "https://impellam.spiraservice.net/Services/v4_0/RestService.svc/projects/{project_id}";
@@ -27,12 +32,15 @@ public class Constant
 	public static final String automation_host_token = "IgniteFramework";
 	public static final String KEYWORD_FAIL = "FAIL";
 	public static final String KEYWORD_PASS = "PASS";
-	public static final String ieDriverPath = "C:\\temp";
-	public static final String chromeDriverPath = "C:\\temp";
+	public static String ieDriverPath = "IEDriverServer.exe";
+	public static String chromeDriverPath = "chromedriver.exe";
 	public static final String TestRun = "https://impellam.spiraservice.net/Services/v4_0/RestService.svc/projects/{project_id}/test-runs/create/test_set/{test_set_id}";
 	public static final String TestStatus = "https://impellam.spiraservice.net/Services/v4_0/RestService.svc/projects/{project_id}/test-runs?end_date={end_date}";
 	public static final String execpath = "\\Utility\\FileManager.exe";
+	public static final String cssPath = "Style/style.css";
+	public static final String espireLogo = "C:\\temp\\logo.png";
 	public static LocalTC Vars=null;
+	public static final String movieMakerPath = "EvoMovieMaker_V2/EvoMovieMaker.exe";
 	//Data Sheet Column Numbers
 	public static final int Col_TestCaseID = 0;	
 	public static final int Col_TestScenarioID =1 ;
@@ -43,7 +51,7 @@ public class Constant
 	public static final int Col_DataSet =6 ;
 	public static final int Col_TestStepResult =7 ;
 	public static WebDriver driver;
-	public static final String tempTestReportPath = "C:\\Temp";
+	public static String tempTestReportPath = "C:\\Temp\\";
  
 	// Data Engine Excel sheets
 	public static final String Sheet_TestSteps = "Test Steps";
@@ -64,20 +72,36 @@ public class Constant
 	public static final int Col_Country = 10;
 	public static final int Col_Phone = 11;
 	public static final int Col_Email = 12;
-	public static final String Path_ScreenShot = "C://TEMP//Screenshots//";
+	public static  String Path_ScreenShot = "Detail//";
 	public static final String Path_OR = null;
+	public static  String File_DownloadPath = "C:\\temp";
+	public static Actions actions;
 	
 	//Translate Engine
+	public static final String Verifydisplayed = "verify displayed";
 	public static final String CheckVisible = "check visible";
 	public static final String Check = "check";
+	public static final String VerifyEnable = "verify enable";
 	public static final String CheckEnable = "check enable";
+	public static final String VerifyEnabled = "verify enabled";
+	public static final String CheckEnabled = "check enabled";
+	public static final String VerifyText = "verify text";
 	public static final String CheckText = "check text";
+	public static final String VerifyLinkText = "verify link text";
 	public static final String CheckLinkText = "check link text";
+	public static final String VerifyValue = "verify value";
 	public static final String CheckValue = "check value";
+	public static final String VerifyIfnotChecked = "verify if not checked";
+	public static final String CheckIfnotChecked = "check if not checked";
+	public static final String VerifyIfChecked = "verify if checked";
 	public static final String CheckIfChecked = "check if checked";
+	public static final String VerifyPageTitle = "verify page title";
 	public static final String CheckPageTitle = "check page title";
+	public static final String VerifyTableRowCount = "verify table row count";
 	public static final String CheckTableRowCount = "check table row count";
+	public static final String VerifyTableColumnCount = "verify table column count";
 	public static final String CheckTableColumnCount = "check table column count";
+	public static final String VerifyTableValues = "verify table values";
 	public static final String CheckTableValues = "check table values";
 	public static final String Comparedbcell = "comparedbcell";
 	public static final String Open = "open";
@@ -96,6 +120,7 @@ public class Constant
 	public static final String Condition = "condition";
 	public static final String IF = "condition";
 	public static final String Compare = "compare";
+	public static final String VerifyVariable = "verify variable";
 	public static final String CheckVariable = "check variable";
 	public static final String ConcludeCondition = "conclude condition";
 	public static final String End_Condition = "end condition";
@@ -104,18 +129,24 @@ public class Constant
 	public static final String LoopHere = "loop here";
 	public static final String Loop = "loop";
 	public static final String Endloop = "endloop";
+	public static final String End_loop = "end loop";
 	public static final String Perform = "perform";
 	public static final String ActionOn = "action on";
 	public static final String ClickOn = "click on";
+	public static final String HitEnter = "hit enter";
+	public static final String HitTab = "hit tab";
 	public static final String Enter = "enter";
+	public static final String Tab = "tab";
 	public static final String SetText = "set text";
 	public static final String Type = "type";
 	public static final String Altclick = "altclick";
 	public static final String HoverOver = "hover over";
 	public static final String Hover = "hover";
+	public static final String SelectFromSpanDropDown = "select from span dropdown";
 	public static final String SelectFromList = "select from list";
 	public static final String Listselect = "listselect";
 	public static final String Select = "select";
+	public static final String Assign_Value = "assign value";
 	public static final String Store_Value = "store value";
 	public static final String ReadValue = "read value";
 	public static final String ReadText = "read text";
@@ -133,7 +164,8 @@ public class Constant
 	public static final String Store = "store";
 	public static final String Storevalue = "storevalue";
 	public static final String Message = "message";
-	public static final String Report = "report";
+	public static final String Report_Passed = "report passed";
+	public static final String Report_Failed = "report failed";
 	public static final String Comment = "comment";
 	public static final String Msgbox = "msgbox";
 	public static final String SetContext = "set context";
@@ -141,8 +173,12 @@ public class Constant
 	public static final String OnPage = "on page";
 	public static final String Context = "context";
 	public static final String RunTest = "run test";
+	public static final String RunTestCase = "run test case";
+	public static final String RunTest_Case = "run testcase";
+	public static final String TestCaseID = "testcaseid";
 	public static final String RunAction = "run action";
 	public static final String CallAction = "call action";
+	public static final String Arithmetic = "arithmetic";
 	public static final String RunFunction = "run function";
 	public static final String CallFunction = "call function";
 	public static final String Callfunction = "callfunction";
@@ -151,10 +187,15 @@ public class Constant
 	public static final String Upload = "upload";
 	public static final String ExractFromDb = "exract from db";
 	public static final String Fetchdb = "fetchdb";
+	public static final String Navigateback = "navigate back";
+	public static final String Navigateforward = "navigate forward";
+	public static final String Browserrefresh = "browser refresh";
+	public static final String Navigate = "navigate";
 	public static final String NavigateTo = "navigate to";
-	public static final String Close = "close";
+	public static final String Close = "click on close";
 	public static final String Click = "click";
 	public static final String Link = "link";
+	public static final String DropDown = "dropdown";
 	public static final String Screencaptureoption = "screencaptureoption";
 	public static final String Cancelupload = "cancelupload";
 	public static final String Closeupload = "closeupload";
@@ -175,25 +216,44 @@ public class Constant
 	public static final String Notequals = "notequals";
 	public static final String Greaterthan = "greaterthan";
 	public static final String Lessthan = "lessthan";
+	public static final String Greater_than = "greater than";
+	public static final String Less_than = "less than";
+	public static final String VerifyNotdisplayed = "verify not displayed";
+	public static final String VerifyNotVisible = "verify not visible";
 	public static final String CheckNotVisible = "check not visible";
+	public static final String VerifyNotEnable = "Verify not enable";
 	public static final String CheckNotEnable = "check not enable";
+	public static final String VerifyNotEnabled = "verify not enabled";
+	public static final String CheckNotEnabled = "check not enabled";
 	public static final String CloseUpload = "Close Upload";
-	public static final String CancleUpload = "Cancle Upload";
-	
-	
-	
+	public static final String CancelUpload = "Cancel Upload";
+	public static final String Ok = "ok";
+	public static final String Cancel = "cancel";
+	public static final String Extract = "extract";
+	public static final String VerifyProperty = "verify property";
+	public static final String Getattribute = "getattribute";
+	public static final String CheckProperty = "check property";
+	public static final String Contains = "contains";
+	public static final String NotEquals = "not equals";
+	public static final String VerifyData = "verify data";
+	public static final String GetCount = "get count";
+	public static final String Swap = "swap";
 	
 	
 	
 	//Report Event
+	public static final String NotRun = "Not Run";
+	public static final String Passed = "Passed";
 	public static final String Executed = "executed";
-	public static final String Failed = "failed";
+	public static final String Failed = "Failed";
+	public static final String Blocked = "Blocked";
 	public static final String NoWindowFound = "NoWindowFound";
 	public static final String Callactionstart = "callactionstart";
 	public static final String Callactionend = "callactionend";
 	public static final String Callactionfnf = "callactionfnf";
 	public static final String Callactionff = "callactionff";
-	public static final String Missing = "missing";
+	public static final String Missing = "Missing";
+	public static final String Caution = "Caution";
 	public static final String ObjectLocator = "ObjectLocator";
 	public static final String TooManyArguments = "tooManyArguments";
 	public static final String NoBlankAvailable = "NoBlankAvailable";
@@ -231,4 +291,3 @@ public class Constant
 	
 	
 }
-

@@ -26,10 +26,6 @@ public class StubTranslator {
 		ActionsList.put("check table row count","check"); 		//Compare the row count of the table object with the given number.
 		ActionsList.put("check table column count","check"); 	//Compare the column count of the table object with the given number.
 		ActionsList.put("check table values","comparedbcell"); //it will search : compare the text of given object with the data table
-		ActionsList.put("open","launchapp"); 					//Launches the given URL
-		ActionsList.put("open browser","launchapp"); 			//Launches the given URL
-		ActionsList.put("wait","wait");   					    //Waits for the given interval 
-		ActionsList.put("sleep","wait");   					//Waits for the given interval
 		ActionsList.put("test data from","importdata");		//Imports  the Data from the given path (Data Sheet path)
 		ActionsList.put("capture screen","screencapture");		//Capture screenshot for evidence 
 		ActionsList.put("screenshot","screencapture");			//Capture screenshot for evidence 

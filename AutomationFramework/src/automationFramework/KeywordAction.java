@@ -1,15 +1,31 @@
 package automationFramework;
-
+/********************************************************************************************************
+ *Project Name		: Ignite Automation framework 
+ *Author		    : Bharat Sethi
+ *Version	    	: V1.0
+ *Date of Creation	: 28-04-2016
+ *Date Last modified: 04/05/2016
+ *Description       : Execution engine : execute all translated steps using selenium web driver
+ *Functions			: 
+ *CallAction : Filter the function to execute based on Action translated by Translation engine
+ *LaunchApp  :
+ *ClossApp   : 
+ ********************************************************************************************************
+ */
 import static org.junit.Assert.fail;
 
 import java.awt.Robot;
+import java.awt.Toolkit;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -29,45 +45,57 @@ import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoAlertPresentException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.interactions.Actions;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.Select;
+import org.openqa.selenium.support.ui.WebDriverWait;
 
+import SpiraTest.SpiraReader;
 import appModules.functionLibary;
 import utility.BrowserFactory;
 import utility.Constant;
-import utility.Log;
+import utility.ExcelUtils;
+/*import utility.Log;*/
+import utility.Utils;
 
+/**
+ * 
+ * @author mohammad.makki
+ *
+ */
 public class KeywordAction extends KeywordLibrary {
-	static WebDriver driver;
 	static String Object;
 	static String Event;
-	static String cCellObjType;
-	static String cCellObjName;
-	static String ObjectSet;
-	static String ObjectSetVal;
+	static String ObjectType;
+	static String ObjectName;
+	static String ObjectEvent;
+	static String ObjectTestData;
 	static String result = "";
-	///////////////////////////////Running loop///////////////////////////////////////
-	static int loopsize = -1;
-	static int[] loopstart = new int[1];
-	static int[] loopcount = new int[1];
-	static int[] loopend = new int[1];
-	static int[] loopcnt = new int[1];
-	static int[] dtrownumloop = new int[1];
-	static int startrow = 0;
-	static int j = 0;
-	static int dtrownum = 1;
-	static int loopnum = 1;
-	static int rowcnt;
-	static int loopflag = 0;
-	//////////////////////////////////////////////////////////////////////////////////
 	static int conditionline = 0;
-	static XSSFSheet XSSDTsheet = null;
 	static String sqlquery;
-
-	public static void CallAction(LocalTC Vars) throws Exception {
+	static Alert dialogSwitch = null;
+	/**************
+	 * Filter which function to call based on the Action translated by translation engine
+	 * @param Vars
+	 * @throws Exception
+	 */
+	public static void CallAction(LocalTC Vars)  {
 		try {
-			
+			Vars.setScreenshotTypeFlag(1);
+			Vars.setExecutionStatus("");
+			Vars.ExecutionResult = "";
+			Vars.setExceptionVar("");
+			SpiraReader SpiraRead = new SpiraReader();
 			Constant.Vars = Vars;
+			//Switch on Action 
 			switch (Vars.Action.toLowerCase()) {
+			case Constant.TestCaseID:
+				if(Vars.getIntegration() == true)
+					SpiraRead.ExtractTestSteps(Vars,Vars.getObj());
+				break;
+			case Constant.Navigate:
+				navigate(Vars);
+				break;
 			case Constant.Loop:  //start loop
 				loop(Vars);
 				break;
@@ -92,16 +120,18 @@ public class KeywordAction extends KeywordLibrary {
 			case Constant.Condition: //checking the condition
 				condition(Vars);
 				break;
-			case Constant.Endcondition:
-				Reporter.ReportEvent(Constant.Executed);
+			case Constant.Endcondition: // end of the condition
+				Vars.conditionSkip = false;
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setRes_type(Constant.Executed);
 				break;
-			case Constant.Screencaptureoption: //capturing screen shot
+			case Constant.Screencaptureoption: //capturing screen shot for perform, check, storevalue
 				screenCaptureOption(Vars);
 				break;
 			case Constant.Importdata:  //importing data from file
 				importdata(Vars);
 				break;
-			case Constant.Fetchdb:  //fetching data from the database
+			case Constant.Fetchdb:  //retrieving data from the database
 				fetchdb(Vars);
 				break;
 			case Constant.Comparedbcell:  //Comparing database
@@ -113,161 +143,319 @@ public class KeywordAction extends KeywordLibrary {
 			case Constant.Context:
 				context(Vars);
 				break;
-			case Constant.Check: //checking different actions
-				Vars.setScreenshotTypeFlag(0);
-				func_StoreCheck(Vars);
-				break;
+			case Constant.Check: //checking different actions - check value for element obj=username as "bharat.sethi"/#var1
 			case Constant.Storevalue:  //storing values
 				Vars.setScreenshotTypeFlag(0);
+				Constant.Vars.capturecheckvalue = false;
 				func_StoreCheck(Vars);
+				Constant.Vars.capturecheckvalue = true;
+				Vars.setScreenshotTypeFlag(1);
 				break;
 			case Constant.Upload:  //uploading document into existing path
 				if (Vars.getObj().toString() == "") {
-					Reporter.ReportEvent(Constant.FilePathNotFound2);
+					Vars.setRes_type(Constant.FilePathNotFound2);
 					doUploadDownload(Constant.Abortupload,Vars);
 				} else {
-					if (new File(Vars.getObj().toString()).exists()) {
-						// System.out.println(cCellData.toString());
+					String strPath = Constant.tempTestReportPath + Vars.getObj();
+					strPath = strPath.replace("//", File.separator);
+					if (new File(strPath.toString()).exists()) {
 						doUploadDownload(Constant.Upload,Vars);
 					} else {
-						Reporter.ReportEvent(Constant.FilePathNotFound);
+						Vars.setRes_type(Constant.FilePathNotFound);
 						doUploadDownload(Constant.Abortupload,Vars);
 					}
 				}
 				break;
-			case Constant.Download: //download from given path
+			case Constant.Download: //download file from the browser
 				download(Vars);
 				break;
 			case Constant.CallAction:
 				varCallaction(Vars);
 				break;
+			case Constant.Arithmetic:
+				Vars.setScreenshotTypeFlag(0);
+				func_Arith(Vars);
+				Vars.setScreenshotTypeFlag(1);
+				break;
+			case Constant.Extract:
+				extract(Vars);
+				break;
+			case Constant.VerifyData:
+				verifyData(Vars);
+				break;
+			case Constant.Assign_Value:
+				result = "Value has been assign";
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setExecutionResult(result);
+				screenShot(Vars);
+				Vars.setRes_type(Constant.Executed);
+				break;
+			case Constant.Swap:
+				swap(Vars);
+				break;
 			default:
-				Reporter.ReportEvent(Constant.Failed);
+				result = "Action is not found";
+				Vars.setExecutionResult(result);
+				Vars.setExecutionStatus(Constant.Blocked);
+				Vars.setRes_type(Constant.Keyword);
 				break;
 			}
 		}
 		catch (Exception ex) {
-			Log.info("failed  " +ex.getMessage() );
-			Log.info("------Error Information : Ignite------- "  );
-			Log.info("Current Script:" +  Vars.iTestCaseID);
-			Log.info("Current Script:" +  Vars.TestStepID);
+			Vars.setExecutionStatus(Constant.Blocked);
+			Vars.setRes_type(Constant.Blocked);
+			Vars.setExceptionVar(ex.toString());
+			result = "failed  " +ex.getMessage()+ " Current Script:" +  Vars.iTestCaseID + " Current Script:" +  Vars.TestStepID;
+			Vars.setExecutionResult(result);
 			fail("Cannot test normally by Ignite.");
 		}
 	}
-
-	public static boolean isInteger(String input) {
-		try {
-			Integer.parseInt(input);
-			return true;
-		} catch (Exception e) {
-			//Log.error(Level.SEVERE, " Exception Occured in isInteger- " +e.getMessage()); 
-			return false;
+	/*
+	 * @return
+	 * @param LocalTC
+	 * Method for nevigation back, forward and refresh the browser
+	 */
+	private static void navigate(LocalTC Vars) {
+		switch (Vars.getObj()){
+		case Constant.Navigateback:
+			Constant.driver.navigate().back();
+			result = "Nevigate to back";
+			Vars.setExecutionStatus(Constant.Passed);
+			Vars.setExecutionResult(result);
+			Vars.setRes_type(Constant.Executed);
+			break;
+		case Constant.Navigateforward:
+			Constant.driver.navigate().forward();
+			result = "Nevigate to forward";
+			Vars.setExecutionStatus(Constant.Passed);
+			Vars.setExecutionResult(result);
+			Vars.setRes_type(Constant.Executed);
+			break;
+		case Constant.Browserrefresh:
+			Constant.driver.navigate().refresh();
+			result = "Nevigate refreshed";
+			Vars.setExecutionStatus(Constant.Passed);
+			Vars.setExecutionResult(result);
+			Vars.setRes_type(Constant.Executed);
+			break;
 		}
 	}
+	/***************
+	 * Launch app for browser name and url defined in constant that gets updated either from test set or from release 
+	 * @param vars
+	 * @throws Exception 
+	 */
+	private static void LaunchApp(LocalTC vars) throws Exception {
+		if (Constant.driver == null) {
+			Constant.driver = BrowserFactory.getBrowser(vars);
+			if(null != vars.getObjProp()){
+				Constant.driver.get(vars.getObjProp());
+				Constant.driver.get("javascript:document.getElementById('overridelink').click();");
+			}
 
-	private static void LaunchApp(LocalTC vars) throws IOException {
-		if(driver == null) {
-			driver =BrowserFactory.getBrowser(vars);
-			driver.get(vars.getObjProp());
-			Constant.driver = driver;
 			result = "Driver has been created for " + vars.getbrowsername();
+			vars.setExecutionResult(result);
+			vars.setExecutionStatus(Constant.Passed);
+			vars.ExecutionResult = result;
+			screenShot(vars);
+			vars.setRes_type(Constant.Executed);
 		}
 		if(vars.getEvent().equals(Constant.NavigateTo)){
-			driver =BrowserFactory.getBrowser(vars);
-			driver.get(vars.getObjProp());
-			Constant.driver = driver;
+			Constant.driver =BrowserFactory.getBrowser(vars);
+			Constant.driver.get(vars.getObjProp());
 			result = "Navigated to " + vars.getObjProp();
+			vars.setExecutionResult(result);
+			vars.ExecutionResult = result;
+			vars.setExecutionStatus(Constant.Passed);
+			screenShot(vars);
+			vars.setRes_type(Constant.Executed);
 		}
-		vars.setExecutionResult(result);
-		System.out.println(result);
-		Log.info(result);
-		Reporter.ReportEvent(Constant.Executed);
-		vars.ExecutionStatus = "Passed";
+		Constant.actions = new Actions(Constant.driver);
 	}
 
+	/**
+	 * @param vars
+	 * @throws IOException
+	 * browser close
+	 */
 	private static void ClossApp(LocalTC vars) throws IOException {
-		driver.close();
-		driver = null;
-		String result = "Browser has been closed";
+		Constant.driver.close();
+		Constant.driver = null;
+		result = "Browser has been closed";
 		vars.setExecutionResult(result);
-		System.out.println(result);
-		Log.info(result);
-		Reporter.ReportEvent(Constant.Executed);
-		vars.ExecutionStatus = "Passed";
+		vars.setExecutionStatus(Constant.Passed);
+		vars.setRes_type(Constant.Executed);
 	}
 
+	/**
+	 * @param Vars
+	 * @throws Exception
+	 */
 	private static void PerformAction(LocalTC Vars) throws Exception {
-		//ScreenshotTypeFlag = 0;
-		By Locator;
-		cCellObjName = Vars.getObjProp().replace("obj=", "").toLowerCase();
-		cCellObjType = Vars.getObj(); 
-		ObjectSet = Vars.Event.toLowerCase();
-		ObjectSetVal=Vars.getTestdata().replace("\"", "");
-		//if (ObjectSetVal.startsWith("dt_") || ObjectSetVal.startsWith("#"))
-		Locator = Vars.obj.getLocator(cCellObjName);
-		if(null != Locator)
-			Vars.elem = Constant.driver.findElement(Locator) ;
-		if (Vars.elem !=null)
+		ObjectName = Vars.getObjProp().replace("obj=", "").toLowerCase();
+		ObjectType = Vars.getObj(); 
+		ObjectEvent = Vars.Event.toLowerCase();
+		ObjectTestData=Vars.getTestdata().replace("\"", "");
+		if (ObjectTestData.startsWith("#") && !ObjectEvent.equalsIgnoreCase("ok"))
+			ObjectTestData = Vars.map.get(ObjectTestData.replace("#", ""));
+		if (ObjectName != "")
+			Vars.Locator = Vars.obj.getLocator(ObjectName);
+		else Vars.Locator = null;
+		if(null != Vars.Locator)
+			Vars.elem = Vars.obj.findelement(Vars.Locator) ;
+		if (Vars.elem !=null || ObjectType.equalsIgnoreCase("alert") || ObjectType.equalsIgnoreCase("dialog"))
 			dCellAction(Vars);
-		else Reporter.ReportEvent(Constant.Missing);
+		else {
+			result="Element is missing";
+			Vars.setExecutionStatus(Constant.Blocked);
+			Vars.setExecutionResult(result);
+			screenShot(Vars);
+			Vars.setRes_type(Constant.Blocked);
+		}
 	}
 
-	private static void waitfor(LocalTC vars) throws NumberFormatException, InterruptedException, IOException {
-		if (vars.getObj().isEmpty()){
-			Thread.sleep(Long.parseLong(vars.getEvent()));
-			Log.info("Waited for " + vars.ObjProp);
-			Reporter.ReportEvent(Constant.Executed);
+	/**
+	 * @param Vars
+	 * @throws Exception
+	 * wait for driver to the given specified time
+	 */
+	private static void waitfor(LocalTC Vars) throws Exception {
+		ObjectName = Vars.getObjProp().replace("obj=", "").toLowerCase();
+		ObjectType = Vars.getObj(); 
+		ObjectEvent = Vars.Event.toLowerCase();
+		ObjectTestData=Vars.getTestdata().replace("\"", "");
+		if (ObjectTestData.startsWith("#"))
+			ObjectTestData = Vars.map.get(ObjectTestData.replace("#", ""));
+		By Locator;
+		WebDriverWait wdw = new WebDriverWait(Constant.driver, Long.parseLong(Vars.getEvent()));
+		if (ObjectName.isEmpty()){
+			Thread.sleep(Long.parseLong(Vars.getEvent()));
+			result = "waited for " + Vars.getEvent();
+			Vars.setExecutionResult(result);
+			Vars.setExecutionStatus(Constant.Passed);
+			Vars.setRes_type(Constant.Executed);
 		}
 		else
 		{
-			Reporter.ReportEvent(Constant.Executed);
-			//dynamic wait for object to appear
-			//Look for element to be available on the screen if not then wait for some time
+			Locator = Vars.obj.getLocator(ObjectName);
+			wdw.until(ExpectedConditions.elementToBeClickable(Locator));
+			result = "waited for object " + ObjectName ;
+			Vars.setExecutionResult(result);
+			Vars.setExecutionStatus(Constant.Passed);
+			Vars.setRes_type(Constant.Executed);
 		}
 	}
 
+	/**
+	 * @param Vars
+	 * @throws Exception
+	 */
 	public static void dCellAction(LocalTC Vars) throws Exception {
 		try {
-			//String objectType = Vars.getObjProp();
-			if(driver == null) {
-				driver =BrowserFactory.getBrowser(Vars);
+			int windowFound = 0;
+			if(Constant.driver == null) {
+				Constant.driver =BrowserFactory.getBrowser(Vars);
 			}
-			//OR obj =new OR("ObjectRepository/OR.Properties");
-			//elem =driver.findElement(obj.getLocator(cCellObjType)) ;
 
 			if (Vars.elem == null) {
 				return;
 			} else {
-				switch (ObjectSet) {
+				switch (ObjectEvent) {
+				case Constant.GetCount:
+					switch (ObjectType.toLowerCase()){
+					case Constant.DropDown:
+						Select select = new Select(Vars.elem);
+						Vars.map.put(ObjectTestData, select.getOptions().size()+"");
+						break;
+					case "xpath":
+						Vars.map.put(ObjectTestData,Constant.driver.findElements(Vars.Locator).size()+"");
+						break;
+					}
+					break;
 				case Constant.Set:
-					if (cCellObjType.equalsIgnoreCase("textbox") || cCellObjType.equalsIgnoreCase("textarea")) {
-						Vars.elem.clear();
+					if (ObjectType.equalsIgnoreCase("textbox") || ObjectType.equalsIgnoreCase("textarea")) {
+						Vars.elem.click();
+						Vars.elem.clear();	
 						StringBuffer inputvalue = new StringBuffer();
-						if (ObjectSetVal == "nodatarow") {
-							//Reporter.ReportEvent("missing", Vars);
-							Reporter.ReportEvent(Constant.Missing);
+						if (ObjectTestData == "nodatarow" || ObjectTestData == "") {
+							Vars.elem.clear();
+							Vars.ExecutionResult = "Unable to entered ";
+							Vars.setExecutionStatus(Constant.Caution);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Missing);
 						} else {
-							inputvalue.append(ObjectSetVal);
-							Vars.elem.sendKeys(ObjectSetVal);
+							inputvalue.append(ObjectTestData);
+							Vars.elem.sendKeys(org.openqa.selenium.Keys.chord(org.openqa.selenium.Keys.CONTROL, "a"), ObjectTestData);
+							//inputvalue.append(ObjectTestData);
+							//Vars.elem.sendKeys(org.openqa.selenium.Keys.chord(org.openqa.selenium.Keys.CONTROL, "a"), ObjectTestData);
+							result = "Value has been entered";
+							Vars.setExecutionStatus(Constant.Passed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Executed);
 						}
-						//if (Vars.captureperform == true) {
-						screenShot(Vars);
-						//}
 					} else {
+						Vars.elem.sendKeys(ObjectTestData);
+						result = "Value has been entered";
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Executed);
+					}
+					break;
+				case Constant.SelectFromSpanDropDown:
+					List<WebElement> element = Vars.elem.findElements(By.tagName("li"));
+					boolean bflag = false;
+					if (ObjectTestData.contains("index:")) {
+						String[] index = ObjectTestData.split(":");
+						element.get(Integer.parseInt(index[1])).click();
+						result = "Index has been selected from a span drop down";
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Executed);
+						bflag = true;
+						break;
+					} else {
+						for (int i = 0; i < element.size(); i++) {
+							String temp = element.get(i).getText();
+							if (temp.equalsIgnoreCase(ObjectTestData)) {
+								element.get(i).click();
+								result = "Value has been selected from a span drop down";
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
+								bflag = true;
+								break;
+							}
+						}
+					}
+					if (!bflag) {
+						element.get(1).click();
+						result = "Could not found value in dropdown";
+						Vars.setExecutionStatus(Constant.Caution);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Missing);
 					}
 					break;
 				case Constant.Listselect:
 					if (Vars.Obj.equalsIgnoreCase("listbox")) {
 						int foundCount = 0;
-						String str = testObjectSetValue(ObjectSetVal);
-						//ObjectSetVal = ObjectSetVal.replaceAll("\\s","");
-						String[] listvalues = ObjectSetVal.split(str);
+						String str = testObjectTestData(ObjectTestData);
+						//ObjectTestData = ObjectTestData.replaceAll("\\s","");
+						String[] listvalues = ObjectTestData.split(str);
 						List<WebElement> listboxitems = Vars.elem
 								.findElements(By.tagName("option"));
 						Select chooseoptn = new Select(Vars.elem);
 						chooseoptn.deselectAll();
-						if (ObjectSetVal == "nodatarow") {
-							Reporter.ReportEvent(Constant.Missing);
+						if (ObjectTestData == "nodatarow") {
+							result = "Value could not be selected";
+							Vars.setExecutionStatus(Constant.Caution);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Missing);
 						} else {
 							for (WebElement opt : listboxitems) {
 								for (int i = 0; i < listvalues.length; i++) {
@@ -277,142 +465,308 @@ public class KeywordAction extends KeywordLibrary {
 									}
 								}
 							}
-							if (foundCount == 0
-									&& ObjectSetVal.contains(""))
-							{
-								Reporter.ReportEvent(Constant.NoBlankAvailable);
+							if (foundCount == 0	&& ObjectTestData.contains(""))
+							{   
+								result="Value not available";
+								Vars.setExecutionStatus(Constant.Failed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.NoBlankAvailable);
 							} else {
-								Reporter.ReportEvent(Constant.Executed, ObjectSet,Vars.Testdata);
-								Log.info("executed for " +  ObjectSet +" on " + Vars.Testdata);
+								result="Value has been selected executed for " + ObjectEvent + " on " + Vars.Testdata;
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
 							}
-							//if (Vars.captureperform == true) {
-							screenShot(Vars);
-							//}
 						}
 					} else {
-						Log.info(Constant.Action1);
+						//Log.info(Constant.Action1);
 					}
 					break;
 
-				case Constant.Select:
+				case Constant.Select: // select "text" from obj=select ; select "index:1" from obj=select
 					if (Vars.Obj.equalsIgnoreCase("combobox")) {
-						if (!ObjectSetVal.isEmpty()) {
-							new Select(Vars.elem)
-							.selectByVisibleText(ObjectSetVal);
-							Reporter.ReportEvent(Constant.Executed, ObjectSet,ObjectSetVal);
-						} else if (ObjectSetVal == "nodatarow") {
-							Reporter.ReportEvent(Constant.Missing);
+						if (!ObjectTestData.isEmpty()) {
+							if(ObjectTestData.contains("index:"))
+							{
+								String[] index = ObjectTestData.split(":");
+								new Select(Vars.elem).selectByIndex(Integer.parseInt(index[1]));
+							}
+							else
+								new Select(Vars.elem).selectByVisibleText(ObjectTestData);
+							result="Value selected";
+							Vars.setExecutionStatus(Constant.Passed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Executed);
+						} else if (ObjectTestData == "nodatarow") {
+							screenShot(Vars);
+							result = "Value could not be selected - missing " ;
+							Vars.setExecutionStatus(Constant.Caution);
+							Vars.setExecutionResult(result);
+							Vars.setRes_type(Constant.Missing);
 						}
-
 						else {
 							if (new Select(Vars.elem).getOptions().toString()
 									.contains("") == true) {
 								try {
 									new Select(Vars.elem)
 									.selectByVisibleText("");
-									Reporter.ReportEvent(Constant.Executed, ObjectSet,Vars.Testdata);
+									Vars.setExecutionStatus(Constant.Passed);
+									result = "Value selected " ;
+									Vars.setExecutionResult(result);
+									screenShot(Vars);
+									Vars.setRes_type(Constant.Executed);
 								} catch (Exception e) {
-									Reporter.ReportEvent(Constant.NoBlankAvailable);
+									result = "Value could not be selected " ;
+									Vars.setExecutionStatus(Constant.Failed);
+									Vars.setExecutionResult(result);
+									screenShot(Vars);
+									Vars.setRes_type(Constant.NoBlankAvailable);
 								}
 							} else {
-								Reporter.ReportEvent(Constant.NoBlankAvailable);
+								result = "Value could not be selected " ;
+								Vars.setExecutionStatus(Constant.Failed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.NoBlankAvailable);
 							}
 						}
-						//if (Vars.captureperform == true) {
-						screenShot(Vars);
-						//}
 					} else {
-						Reporter.ReportEvent(Constant.Action1);
+						result = "Object not available" ;
+						Vars.setExecutionStatus(Constant.Blocked);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Blocked);
 					}
 					break;
 				case Constant.Check:
-					if (ObjectSetVal == "nodatarow") {
-						//Reporter.ReportEvent("missing");
+					if (ObjectTestData == "nodatarow") {
+						result = "data is missing " ;
+						Vars.setExecutionStatus(Constant.Caution);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Missing);
 					} else {
 						if (Vars.Obj.equalsIgnoreCase("checkbox")) {
-							if (Vars.elem.isSelected()
-									&& ObjectSetVal.equalsIgnoreCase("On")) {
-								Reporter.ReportEvent(Constant.Executed, ObjectSet,Vars.Testdata);
-							} else if ((Vars.elem.isSelected() && ObjectSetVal
-									.equalsIgnoreCase("off"))) {
+							if (Vars.elem.isSelected()	&& ObjectTestData.equalsIgnoreCase("On")) {
+								result =   "Value has been checked";
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
+							} else if ((Vars.elem.isSelected() && ObjectTestData.equalsIgnoreCase("off"))) {
 								Vars.elem.click();
-								Reporter.ReportEvent(Constant.Executed, ObjectSet,Vars.Testdata);
-							} else if (ObjectSetVal.equalsIgnoreCase("on")) {
+								Vars.setExecutionStatus(Constant.Passed);
+								result =   "Value has been checked";
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
+							} else if (ObjectTestData.equalsIgnoreCase("on")) {
 								Vars.elem.click();
-								Reporter.ReportEvent(Constant.Executed, ObjectSet,Vars.Testdata);
-							} else if ((ObjectSetVal
+								Vars.setExecutionStatus(Constant.Passed);
+								result =   "Value has been checked";
+								screenShot(Vars);
+								Vars.setExecutionResult(result);
+								Vars.setRes_type(Constant.Executed);
+							} else if ((ObjectTestData
 									.equalsIgnoreCase("off"))) {
-								Reporter.ReportEvent(Constant.Executed, ObjectSet,Vars.Testdata);
+								Vars.setExecutionStatus(Constant.Passed);
+								result =   "Value has been checked";
+								screenShot(Vars);
+								Vars.setExecutionResult(result);
+								Vars.setRes_type(Constant.Executed);
 							} else {
-								Reporter.ReportEvent(Constant.Failed, ObjectSet,Vars.Testdata);
+								result =   "Could not be checked";
+								Vars.setExecutionStatus(Constant.Failed);
+								screenShot(Vars);
+								Vars.setExecutionResult(result);
+								Vars.setRes_type(Constant.Failed);
 							}
-							//if (Vars.captureperform == true) {
-							screenShot(Vars);
-							//}
 						} else {
-							Reporter.ReportEvent(Constant.Action1);
-						}
+							result =   "Could not be checked";
+							Vars.setExecutionStatus(Constant.Failed);
+							screenShot(Vars);
+							Vars.setExecutionResult(result);
+							Vars.setRes_type(Constant.Action1);
+						}  
 					}
 					break;
-				case Constant.Click:
+				case Constant.Click: //Click on obj="object" 
 					//parentWindowHandle1 = driver.getWindowHandle();
 					try {
-
-						if (Vars.elem.getAttribute("type").toLowerCase()
-								.equals("file")
-								&& Vars.getbrowsername().equalsIgnoreCase("ff")) {
-
-							JavascriptExecutor executor = (JavascriptExecutor) driver;
-							executor.executeScript("arguments[0].click();",Vars.elem);
-
-							Reporter.ReportEvent(Constant.Executed);
-							break;
-
-						} else if (Vars.elem.getAttribute("type").toLowerCase().equals("file")
-								&& Vars.getbrowsername().equalsIgnoreCase("ie")
-								&& Integer.parseInt(Vars.getBrowserVer()) == 8) {
-							Reporter.ReportEvent(Constant.Executed);
-						} else {
-							Vars.elem.click();
-							Reporter.ReportEvent(Constant.Executed);
+						//click on table obj=webtable in column 7 with "title:contains(Extend)"
+						//click on table obj=webtable in column 7 with "title:#Extend"
+						//search in 7th column and click on 12th column 
+						//click on table obj=webtable in column 7 with "text:#Extend:12"
+						//click on table obj=webtable in column 7 index 3 for 7 times/rows with "text:#Extend:12"
+						//click on table obj=webtable in column 7 with "value:Extend"
+						if(ObjectType.equalsIgnoreCase("table")) {
+							int row,j=1;//,rowindex; // to hold number of rows in the webtable
+							boolean foundtext=false;
+							boolean fcontains=false;
+							String elementText =""; // to hold the text of the element in a cell
+							int column=0,index = 0; //holds column to click on
+							int rowcount=0,rowcounter=0; //How many rows to select
+							int rowtoread; //hold which row to read from
+							WebElement clickonelement; // hold the element in cell
+							List<WebElement> childelementstoread,colelements; // hold the list of elements in column and cell
+							//List<WebElement> childelementstoclick;
+							String[] arr;
+							List<WebElement> rows = Vars.elem.findElements(By.tagName("tr")); // get all row element
+							row = rows.size(); //count number of rows
+							String[] attribute = ObjectTestData.split(":"); //get on what property should we compare
+							/*       Pattern pattern = Pattern.compile("[0-9]+");
+						       Matcher matcher = pattern.matcher(Vars.sTestStep);
+						       if(matcher.find()){
+						    	   column = Integer.parseInt(matcher.group(0));
+						    	   if (matcher.groupCount() >1)
+						    		   if (Vars.sTestStep.toLowerCase().contains("index"))
+						    			   index = 	Integer.parseInt(matcher.group(1));   
+					       }*/
+							elementText = Vars.sTestStep.replaceAll("[^-?0-9]+", " ");
+							arr = elementText.trim().split(" ");
+							column = Integer.parseInt(arr[0]);
+							if (Vars.sTestStep.toLowerCase().contains("contains"))
+								fcontains = true;
+							if (Vars.sTestStep.toLowerCase().contains("index")){
+								index = Integer.parseInt(arr[1]);
+								if(arr.length > 2)
+									rowcount = Integer.parseInt(arr[2]);
+							}
+							else
+								if (Vars.sTestStep.toLowerCase().contains(" rows ") || Vars.sTestStep.toLowerCase().contains(" times ")) 
+									rowcount = Integer.parseInt(arr[1]); 
+							if(attribute.length > 2)
+								rowtoread = Integer.parseInt(attribute[2]);
+							else
+								rowtoread = column;
+							if(attribute[1].contains("#"))
+								attribute[1] = Vars.map.get(attribute[1].replace("#", ""));
+							for(int i=1; i<=row;i++){
+								//if(rowindex == 0 && row > rowindex)
+								colelements = rows.get(i).findElements(By.tagName("td"));
+								//else
+								// colelements = rows.get(rowindex).findElements(By.tagName("td"));
+								elementText=colelements.get(rowtoread-1).getText().toLowerCase();
+								if(elementText.equalsIgnoreCase("")){
+									childelementstoread = colelements.get(rowtoread-1).findElements(By.xpath(".//*"));
+									for(j=1;j<=childelementstoread.size();j++){
+										clickonelement = childelementstoread.get(j-1);
+										if(attribute[0].contains("text"))
+											elementText=clickonelement.getText().toLowerCase();
+										else
+											elementText=clickonelement.getAttribute(attribute[0]).toLowerCase();
+									}
+								}
+								if(fcontains){
+								if (elementText.contains(attribute[1].trim()))
+									foundtext = true;
+								}
+								else
+								if (elementText.equalsIgnoreCase(attribute[1].trim()))
+									foundtext = true;
+								if (foundtext == true){
+									clickonelement = colelements.get(column-1).findElements(By.xpath(".//*")).get(index);
+									Constant.actions.moveToElement(clickonelement).click().perform();
+									rowcounter++;
+									if(rowcounter>=rowcount){
+										i = row+1; // break the for loop for row
+										//j = childelementstoread.size()+1; // break the for loop for childs in cell
+									}
+								}
+							}
+						}
+						else {  
+							if (Vars.elem.getAttribute("type") !=null){
+								if (Vars.elem.getAttribute("type").toLowerCase().equals("file")
+										&& Vars.getbrowsername().equalsIgnoreCase("firefox")) {
+									JavascriptExecutor executor = (JavascriptExecutor) Constant.driver;
+									executor.executeScript("arguments[0].click();",Vars.elem);
+									result="Clicked on file type object in firefox";
+									Vars.setExecutionStatus(Constant.Passed);
+									Vars.setExecutionResult(result);
+									screenShot(Vars);
+									Vars.setRes_type(Constant.Executed);
+									break;
+								} else if (Vars.elem.getAttribute("type").toLowerCase().equals("file")
+										&& Vars.getbrowsername().equalsIgnoreCase("ie")
+										&& Integer.parseInt(Vars.getBrowserVer()) == 8) {
+									result="Clicked on file type object in IE";
+									Vars.setExecutionStatus(Constant.Passed);
+									Vars.setExecutionResult(result);
+									screenShot(Vars);
+									Vars.setRes_type(Constant.Executed);
+								}
+								else{
+									Vars.elem.click();
+									result="Clicked on object";
+									Vars.setExecutionStatus(Constant.Passed);
+									Vars.setExecutionResult(result);
+									screenShot(Vars);
+									Vars.setRes_type(Constant.Executed);
+								}
+							}
+							else{
+								Vars.elem.click();
+								result="Clicked on object";
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
+							}
 						}
 					} catch (Exception exp1) {
 						Vars.elem.click();
-						Reporter.ReportEvent(Constant.Executed);
+						result="Clicked with exception :" + exp1.getMessage();
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Executed);
 					}
-					//if (Vars.captureperform == true) {
-					screenShot(Vars);
-					//}
 					break;
 				case Constant.Hover:
-					JavascriptExecutor js = (JavascriptExecutor) driver;
+					JavascriptExecutor js = (JavascriptExecutor) Constant.driver;
 					String mouseOverScript = "if(document.createEvent){var evObj = document.createEvent('MouseEvents');evObj.initEvent('mouseover', true, false); arguments[0].dispatchEvent(evObj);} else if(document.createEventObject) { arguments[0].fireEvent('onmouseover');}";
 					js.executeScript(mouseOverScript, Vars.elem);
-					Reporter.ReportEvent(Constant.Executed);
+					result="Mouse hover action has been performed";
+					Vars.setExecutionStatus(Constant.Passed);
+					Vars.setExecutionResult(result);
+					screenShot(Vars);
+					Vars.setRes_type(Constant.Executed);
 					break;
-
 				case Constant.Altclick:
-					JavascriptExecutor executor = (JavascriptExecutor) driver;
+					JavascriptExecutor executor = (JavascriptExecutor) Constant.driver;
 					executor.executeScript("arguments[0].click();", Vars.elem);
-					Reporter.ReportEvent(Constant.Executed);
+					result="Alt clicked";
+					Vars.setExecutionStatus(Constant.Passed);
+					Vars.setExecutionResult(result);
+					screenShot(Vars);
+					Vars.setRes_type(Constant.Executed);
 					break;
 				case Constant.Enter:
 					Vars.elem.sendKeys(org.openqa.selenium.Keys.ENTER);
-					Reporter.ReportEvent(Constant.Executed);
-					//if (Vars.captureperform == true) {
+					result="Hit the enter button";
+					Vars.setExecutionStatus(Constant.Passed);
+					Vars.setExecutionResult(result);
 					screenShot(Vars);
-					//}
+					Vars.setRes_type(Constant.Executed);
+					break;
+				case Constant.Tab:
+					Vars.elem.sendKeys(org.openqa.selenium.Keys.TAB);
+					result="Tab the tab button";
+					Vars.setExecutionStatus(Constant.Passed);
+					Vars.setExecutionResult(result);
+					screenShot(Vars);
+					Vars.setRes_type(Constant.Executed);
 					break;
 				case Constant.Setdate:
-
 					Robot robot1 = new Robot();
-					//ScreenshotTypeFlag = 1;
-					String calstring = cCellObjName.toLowerCase();
-					if (cCellObjType.equalsIgnoreCase("calendar")
-							&& calstring.startsWith("cal_")) {
+					ObjectName.toLowerCase();
+					if (ObjectType.equalsIgnoreCase("calendar")) {
 						try {
-
-							String[] datearray = ObjectSetVal.split("-");
+							String[] datearray = ObjectTestData.split("-");
 							String mm = datearray[0];
 							String dd = datearray[1];
 							String yyyy = datearray[2];
@@ -430,31 +784,269 @@ public class KeywordAction extends KeywordLibrary {
 									|| (Integer.parseInt(dd) > 28
 											&& Integer.parseInt(mm) == 2 && (Integer
 													.parseInt(yyyy) % 4 != 0))) {
-								Reporter.ReportEvent(Constant.Invaliddate1);
+								result="Invalida Date";
+								Vars.setExecutionStatus(Constant.Blocked);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Invaliddate1);
 							} else {
-								//selectDate(mm, dd, yyyy);
+								Vars.obj.selectDate(mm, dd, yyyy);
 							}
 
 						} catch (Exception e) {
-							Reporter.ReportEvent(Constant.Invaliddate1);
+							result="Invalida Date";
+							Vars.setExecutionStatus(Constant.Blocked);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Invaliddate1);
 							robot1.keyPress(KeyEvent.VK_ESCAPE);
 							robot1.keyRelease(KeyEvent.VK_ESCAPE);
 						}
 					} else {
-						Reporter.ReportEvent(Constant.Calendaraction);
+						result="Invalida Date";
+						Vars.setExecutionStatus(Constant.Blocked);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Calendaraction);
+					}
+					break;
+				case Constant.Ok:
+					if (ObjectType.equalsIgnoreCase("dialog")
+							|| ObjectType.equalsIgnoreCase("dialog;")
+							|| ObjectType.equalsIgnoreCase("alert")) {
+						dialogSwitch = Constant.driver.switchTo().alert();
+						String dialogSwitchText = dialogSwitch.getText();
+						String VarTestData = Vars.getTestdata().replace("#", "");
+						if (! VarTestData.equals(""))
+							Vars.map.put(VarTestData, dialogSwitchText);
+						dialogSwitch.accept();
+						result="Ok has been performed on alert with text " + dialogSwitchText ;
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Executed);
+					}
+					break;
+				case Constant.Cancel:
+					if (ObjectType.equalsIgnoreCase("dialog")
+							|| ObjectType.equalsIgnoreCase("dialog;")
+							|| ObjectType.equalsIgnoreCase("alert")) {
+						dialogSwitch = Constant.driver.switchTo().alert();
+						String VarTestData = Vars.getTestdata().replace("#", "");
+						if (! VarTestData.equals(""))
+							Vars.map.put(VarTestData, dialogSwitch.getText());
+						dialogSwitch.dismiss();
+						result="cancle has been performed on alert with text " + dialogSwitch.getText() ;
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Executed);
+					}
+					break;
+
+				case Constant.Close:
+					if (ObjectType.equalsIgnoreCase("dialog")
+							|| ObjectType.equalsIgnoreCase("dialog;")
+							|| ObjectType.equalsIgnoreCase("alert")) {
+
+						dialogSwitch = Constant.driver.switchTo().alert();
+						dialogSwitch.dismiss();
+						result="Dialog has been closed";
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						Vars.setRes_type(Constant.Executed);
+						if (Vars.captureperform == true) {
+							screenShot(Vars);
+						}
+					}
+					else {
+						windowFound = 0;
+						int windowNums = 0;
+						int windowItr = 0;
+						String currentWindowHandle = Constant.driver.getWindowHandle();
+						WebDriver newWindow = null;
+						Set<String> al = new HashSet<String>();
+						al = Constant.driver.getWindowHandles();
+						windowNums = al.size();
+						Iterator<String> windowIterator = al.iterator();
+						if (ObjectName.equalsIgnoreCase("page;")
+								|| ObjectName.equalsIgnoreCase("page")) {
+							if (windowNums == 1) {
+								Constant.driver.close();
+								result="Dialog has been closed";
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
+								windowFound = 1;
+							} else {
+								int winItr1 = 0;
+								String windowHandle = null;
+								String tempWindowHandle = null;
+								while (winItr1 != windowNums) {
+									tempWindowHandle = windowHandle;
+									windowHandle = windowIterator.next();
+									newWindow = Constant.driver.switchTo().window(
+											windowHandle);
+									if (currentWindowHandle
+											.equalsIgnoreCase(windowHandle)) {
+										if (winItr1 == 0) {
+											Constant.driver.close();
+											windowHandle = windowIterator
+													.next();
+											Constant.driver.switchTo().window(windowHandle);
+											result="Dialog has been closed";
+											Vars.setExecutionStatus(Constant.Passed);
+											Vars.setExecutionResult(result);
+											screenShot(Vars);
+											Vars.setRes_type(Constant.Executed);
+											windowFound = 1;
+											break;
+										} else {
+											Constant.driver.close();
+											Constant.driver.switchTo().window(
+													tempWindowHandle);
+											result="Dialog has been closed";
+											Vars.setExecutionStatus(Constant.Passed);
+											Vars.setExecutionResult(result);
+											screenShot(Vars);
+											Vars.setRes_type(Constant.Executed);
+											windowFound = 1;
+											break;
+										}
+									}
+									winItr1++;
+								}
+							}
+						} else {
+							if (windowNums == 1) {
+								if (Constant.driver.getTitle().toString()
+										.equalsIgnoreCase(ObjectTestData) == true) {
+									if (Vars.captureperform == true) {
+										screenShot(Vars);
+									}
+									Constant.driver.close();
+									result="Dialog has been closed";
+									Vars.setExecutionStatus(Constant.Passed);
+									Vars.setExecutionResult(result);
+									screenShot(Vars);
+									Vars.setRes_type(Constant.Executed);
+									windowFound = 1;
+								}
+							} else {
+								if (ObjectType.equalsIgnoreCase("page")
+										&& Constant.driver.getTitle().equalsIgnoreCase(
+												ObjectName) == false) {
+									for (windowItr = 0; windowItr < windowNums; windowItr++) {
+										String windowHandle = windowIterator.next();
+										newWindow = Constant.driver.switchTo().window(
+												windowHandle);
+										if (newWindow.getTitle()
+												.equalsIgnoreCase(ObjectName)) {
+											if (Vars.captureperform == true) {
+												screenShot(Vars);
+											}
+											newWindow.close();
+											result="Dialog has been closed";
+											Vars.setExecutionStatus(Constant.Passed);
+											Vars.setExecutionResult(result);
+											screenShot(Vars);
+											Vars.setRes_type(Constant.Executed);
+											Constant.driver.switchTo().window(
+													currentWindowHandle);
+											windowFound = 1;
+											break;
+										}
+									}
+
+								} else {
+									if (ObjectType.equalsIgnoreCase("page")
+											&& Constant.driver.getTitle()
+											.toString()
+											.equalsIgnoreCase(
+													ObjectName) == true) {
+										int winItr1 = 0;
+										String windowHandle = null;
+										String tempWindowHandle = null;
+										while (winItr1 != windowNums) {
+											tempWindowHandle = windowHandle;
+											windowHandle = windowIterator
+													.next();
+											newWindow = Constant.driver.switchTo().window(
+													windowHandle);
+											if (currentWindowHandle
+													.equalsIgnoreCase(windowHandle)) {
+												if (winItr1 == 0) {
+													if (Vars.captureperform == true) {
+														screenShot(Vars);
+													}
+													Constant.driver.close();
+													windowHandle = windowIterator
+															.next();
+													Constant.driver.switchTo().window(
+															windowHandle);
+													result="Dialog has been closed";
+													Vars.setExecutionStatus(Constant.Passed);
+													Vars.setExecutionResult(result);
+													screenShot(Vars);
+													Vars.setRes_type(Constant.Executed);
+													windowFound = 1;
+													break;
+												} else {
+													Constant.driver.close();
+													Constant.driver.switchTo().window(
+															tempWindowHandle);
+													result="Dialog has been closed";
+													Vars.setExecutionStatus(Constant.Passed);
+													Vars.setExecutionResult(result);
+													screenShot(Vars);
+													Vars.setRes_type(Constant.Executed);
+													windowFound = 1;
+													break;
+
+												}
+											}
+
+											winItr1++;
+										}
+
+									}
+								}
+							}
+						}
+						if (windowFound != 1) {
+							result="Dialog has not been closed";
+							Vars.setExecutionStatus(Constant.Blocked);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.NoWindowFound);
+						}
 					}
 					break;
 				default:
-					Reporter.ReportEvent(Constant.Action);
+					result="No action available";
+					Vars.setExecutionStatus(Constant.Blocked);
+					Vars.setExecutionResult(result);
+					screenShot(Vars);
+					Vars.setRes_type(Constant.Action);
 					break;
 				}
 			}
 		} catch (Exception e) {
-			System.out.println(e.toString());
-			Reporter.ReportEvent(Constant.Failed, e);
+			result="No action available";
+			Vars.setExecutionStatus(Constant.Blocked);
+			Vars.setExecutionResult(result);
+			screenShot(Vars);
+			Vars.setRes_type(Constant.Blocked);
+			Vars.setExceptionVar(e.toString());
 		}
 	}
 
+	/**
+	 * @param functionName
+	 * @param argumentlist
+	 * @throws IOException
+	 */
 	public static void func_InvokeFunction(String functionName,	String argumentlist) throws IOException 
 	{
 		Object[] argument_list = null;
@@ -462,11 +1054,10 @@ public class KeywordAction extends KeywordLibrary {
 		int CheckONE = 0;
 		Class[] parameterTypes = null;
 		Constant.Vars.setTestdata(argumentlist);
-		//if (argumentlist == "") {
 		if (argumentlist.isEmpty()) {
 			checkNULL = 1;
-		} else if (argumentlist.contains(",")) {
-			argument_list = argumentlist.split(",");
+		} else if (argumentlist.contains("#&")) {
+			argument_list = argumentlist.split("#&");
 			Constant.Vars.setTestdata(argumentlist); 
 		} else {
 			CheckONE = 1;
@@ -476,7 +1067,6 @@ public class KeywordAction extends KeywordLibrary {
 			functionLibary s1 = new functionLibary();
 			Method[] declaredMethods = functionLibary.class.getDeclaredMethods();
 			for (Method m : declaredMethods) {
-				System.out.println(m.getName());
 				if (checkNULL != 1) {
 					parameterTypes = m.getParameterTypes();
 				}
@@ -486,22 +1076,33 @@ public class KeywordAction extends KeywordLibrary {
 							if (parameterTypes.length == argument_list.length) {
 								try {
 									m.invoke(s1, argument_list);
-									Log.info("executed : Direcotry is already Created");
-									Reporter.ReportEvent(Constant.Executed);
+									result="Function called";
+									Constant.Vars.setExecutionStatus(Constant.Passed);
+									Constant.Vars.setExecutionResult(result);
+									Constant.Vars.setRes_type(Constant.Executed);
 								} catch (Exception e) {
-									Log.error("userdefined : Direcotry is already Created");
-									Reporter.ReportEvent(Constant.Userdefined);
+									result="User defined error: Direcotry is already Created";
+									Constant.Vars.setExecutionStatus(Constant.Caution);
+									Constant.Vars.setExecutionResult(result);
+									Constant.Vars.setRes_type(Constant.Userdefined);
 								}
 								break;
 							}
-							
+
 						} else if ((m.getName()).equals(function_name)
 								&& CheckONE == 1 && parameterTypes.length == 1) {
 							try {
 								m.invoke(s1, argumentlist);
-								Reporter.ReportEvent(Constant.Executed);
+								result="Function called";
+								Constant.Vars.setExecutionStatus(Constant.Passed);
+								Constant.Vars.setExecutionResult(result);
+								Constant.Vars.setRes_type(Constant.Executed);
+								Constant.Vars.setExecutionStatus(Constant.Passed);
 							} catch (Exception e) {
-								Reporter.ReportEvent(Constant.Userdefined);
+								result="function failed to called";
+								Constant.Vars.setExecutionStatus(Constant.Failed);
+								Constant.Vars.setExecutionResult(result);
+								Constant.Vars.setRes_type(Constant.Failed);
 							}
 							break;
 						}
@@ -509,48 +1110,140 @@ public class KeywordAction extends KeywordLibrary {
 				} else if (m.getName().equals(function_name) && checkNULL == 1) {
 					try {
 						m.invoke(s1);
-						Reporter.ReportEvent(Constant.Executed);
+						result="Function called";
+						Constant.Vars.setExecutionStatus(Constant.Passed);
+						Constant.Vars.setExecutionResult(result);
+						Constant.Vars.setRes_type(Constant.Executed);
 					} catch (Exception e) {
-						Reporter.ReportEvent(Constant.Userdefined);
+						result="function failed to called";
+						Constant.Vars.setExecutionStatus(Constant.Failed);
+						Constant.Vars.setExecutionResult(result);
+						Constant.Vars.setRes_type(Constant.Failed);
 					}
 					break;
 				}
 			}
 		} catch (Exception e) {
-			System.out.println(e);
-			Reporter.ReportEvent(Constant.Failed, e);
-			//Log.info(Level.SEVERE, " Exception Occured in func_InvokeFunction- " +e.getMessage()); 
+			result="Calling function is failed" + e.getMessage();
+			Constant.Vars.setExecutionStatus(Constant.Failed);
+			Constant.Vars.setExecutionResult(result);
+			Constant.Vars.setRes_type(Constant.Failed);
+			Constant.Vars.setExceptionVar(e.toString());
 		}
 	}
+	
+	/**
+	 * resettig the loop
+	 */
 	public static void Resetloop(){
+		Constant.Vars.startrow = -1;                    
+		Constant.Vars.dtrownum = 1;					
+		Constant.Vars.loopnum = -1;  
+		Constant.Vars.loopsize = -1;
 		for (int z = 0; z < 1; z++) 
 		{
-			loopstart[z] = 0;
-			loopend[z] = 0;
-			loopcnt[z] = 0;
-			dtrownumloop[z] = 1;
-			loopcount[z] = 0;
+			Constant.Vars.loopstart[z] = 0;
+			Constant.Vars.loopend[z] = 0;
+			Constant.Vars.loopcnt[z] = 0;
+			Constant.Vars.dtrownumloop[z] = 1;
+			Constant.Vars.loopcount[z] = 0;
+			Constant.Vars.loopTestCases[z] = "";
+			Constant.Vars.loopTestData[z] = "";
+			Constant.Vars.loopTestStepID[z] = "";
 		}
 	}
 
+	/**
+	 * @param Vars
+	 * @throws Exception
+	 * method for performing arithmetic operation
+	 */
+	private static void func_Arith(LocalTC Vars) throws Exception {
+		String objectType = Vars.getObj().replace("#", "");     
+		String ObjectValCh = Vars.getObjProp().replace("#", "");
+		String ObjectEventCh = Vars.getEvent();                             
+		String ObjectTestDataCh = Vars.getTestdata().replace("#", "");
+		String result = "";
+		if (Vars.map.containsKey(ObjectValCh)) 
+			ObjectValCh = Vars.map.get(ObjectValCh);
+		else if(! Utils.isInteger(ObjectValCh)){
+			Vars.map.put(ObjectValCh,"0");
+			ObjectValCh = "0";
+		}
+		if (Vars.map.containsKey(ObjectTestDataCh)) 
+			ObjectTestDataCh = Vars.map.get(ObjectTestDataCh);
+		else if(! Utils.isInteger(ObjectTestDataCh)){
+			Vars.map.put(ObjectTestDataCh,"0");
+			ObjectTestDataCh = "0";
+		}
+		if (Vars.map.containsKey(objectType)) 
+			Vars.map.remove(objectType);
+		else if(! Utils.isInteger(objectType))
+			Vars.map.put(objectType,"0");
+
+		switch (ObjectEventCh) {
+		case "+":
+			if(ObjectValCh.contains("_")){
+				SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy");
+				Calendar c = Calendar.getInstance();
+				c.setTime(sdf.parse(ObjectEventCh));
+				c.add(Calendar.DATE, Integer.parseInt(ObjectTestDataCh));  // number of days to add
+				result = sdf.format(c.getTime());  // dt is now the new date
+			}
+			else
+				result = Integer.parseInt(ObjectValCh) + Integer.parseInt(ObjectTestDataCh) + "";
+			break;
+		case "-":
+			if(ObjectValCh.contains("_")){
+				SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy");
+				Calendar c = Calendar.getInstance();
+				c.setTime(sdf.parse(ObjectEventCh));
+				c.add(Calendar.DATE, Integer.parseInt(ObjectEventCh+ObjectTestDataCh));  // number of days to subtract
+				result = sdf.format(c.getTime());  // dt is now the new date
+			}
+			else
+				result = Integer.parseInt(ObjectValCh) - Integer.parseInt(ObjectTestDataCh) + "";
+			break;
+		case "/":
+			result = Integer.parseInt(ObjectValCh) / Integer.parseInt(ObjectTestDataCh) + "";
+			break;
+		case "*":
+			result = Integer.parseInt(ObjectValCh) * Integer.parseInt(ObjectTestDataCh) + "";
+			break;
+		case "%":
+			result = Integer.parseInt(ObjectValCh) *  Integer.parseInt(ObjectTestDataCh) / 100 + "";
+			break;
+		}
+		result = "Arithmetic expression has been performed";
+		Vars.setExecutionStatus(Constant.Passed);
+		Vars.setExecutionResult(result);
+		screenShot(Vars);
+		Vars.setRes_type(Constant.Executed);
+		Vars.map.put(objectType, result + "");
+	}
+
+	/**
+	 * @param Vars
+	 * @throws Exception
+	 */
 	private static void func_StoreCheck(LocalTC Vars) throws Exception {
+		//checking different actions - check value for element obj=username as "bharat.sethi"/#var1
 		try {
 			String actval = null;
 			String expval = null;
 			Boolean boolval = null;
 			String varname;
+			boolean bFound = false;
 			int iflag =0;
 			String objectType = Vars.getObj();     
 			String ObjectValCh = Vars.getObjProp();
-			String ObjectSetCh = Vars.getEvent();                             
-			String ObjectSetValCh = Vars.getTestdata();
+			String ObjectEventCh = Vars.getEvent();                             
+			String ObjectTestDataCh = Vars.getTestdata();
 			int DTcolumncountCh = 0;
-			if (!ObjectSetValCh.isEmpty() && ObjectSetValCh.substring(0, 1).equalsIgnoreCase("#")) {
-				System.out.println("In #");
-				if (Vars.map.get(ObjectSetValCh.substring(1,(ObjectSetValCh.length()))) != null) {
-					ObjectSetValCh = Vars.map.get(ObjectSetValCh.substring(1,(ObjectSetValCh.length())));
-				} else {
-					ObjectSetValCh = "";
+			expval = ObjectTestDataCh;
+			if (!ObjectTestDataCh.isEmpty() && ObjectTestDataCh.substring(0, 1).equalsIgnoreCase("#") && Vars.getAction().equals("check")) {
+				if (Vars.map.get(ObjectTestDataCh.substring(1,(ObjectTestDataCh.length()))) != null) {
+					ObjectTestDataCh = Vars.map.get(ObjectTestDataCh.substring(1,(ObjectTestDataCh.length())));
 				}
 			}
 			if (objectType.equalsIgnoreCase("page")|| objectType.equalsIgnoreCase("dialog")) {
@@ -558,64 +1251,207 @@ public class KeywordAction extends KeywordLibrary {
 			} else
 
 			{
-				Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
-				if (Vars.elem !=null)
-					Vars.objFoundFlag = 1;
-				else Reporter.ReportEvent(Constant.Missing);
-			}
+				bFound = true;
+				if(ObjectValCh.equalsIgnoreCase("contains") || ObjectValCh.equalsIgnoreCase("equals") || ObjectValCh.equalsIgnoreCase(" not equals"))
+				{
+					if (Vars.map.get(objectType.substring(1,(objectType.length()))) != null) {
+						objectType = Vars.map.get(objectType.substring(1,(objectType.length())));
+					} else {
+						objectType = "";
+					}
+					if (Vars.map.get(ObjectEventCh.substring(1,(ObjectEventCh.length()))) != null) {
+						ObjectEventCh = Vars.map.get(ObjectEventCh.substring(1,(ObjectEventCh.length())));
+					} else {
+						ObjectEventCh = "";
+					}
+					actval = objectType;
+					expval =  ObjectEventCh;
+					switch(ObjectValCh){
+					case "contains":
+						if (actval.contains(expval)) {
+							result = "Actual value contains expected value. "
+									+ " Actual Value is " + actval 
+									+ " and expected value is " + expval;
+							Vars.setExecutionStatus(Constant.Passed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Executed);
+						}
+						else{
+							result = "Actual value does not contain expected value. "
+									+ " Actual Value is " + actval 
+									+ " and expected value is " + expval;
+							Vars.setExecutionStatus(Constant.Failed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Failed);
+						}
+						break;
+					case "equals":
+						if (actval.equalsIgnoreCase(expval)) {
+							result = "Actual value equals expected value. "
+									+ " Actual Value is " + actval 
+									+ " and expected value is " + expval;
+							Vars.setExecutionStatus(Constant.Passed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Executed);
+						}
+						else{
+							result = "Actual value is not matching expected value. "
+									+ " Actual Value is " + actval 
+									+ " and expected value is " + expval;
+							Vars.setExecutionStatus(Constant.Failed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Failed);
+						}							
+						break;
+					case "not equals":
+						if (! actval.equalsIgnoreCase(expval)) {
+							result = "Actual value is not matching expected value. "
+									+ " Actual Value is " + actval 
+									+ " and expected value is " + expval;
+							Vars.setExecutionStatus(Constant.Passed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Executed);
+						}
+						else{
+							result = "Actual value matches expected value. "
+									+ " Actual Value is " + actval 
+									+ " and expected value is " + expval;
+							Vars.setExecutionStatus(Constant.Failed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Failed);
+						}
+						break;	
+					}
+				}else if (ObjectValCh.equals("displayed") || ObjectValCh.equals("display")) {
+					List<WebElement> listDisplay = Constant.driver
+							.findElements(By.xpath("//*[contains(text(),'" + ObjectTestDataCh + "')]"));
+					if (listDisplay.size() == 0) {
+						listDisplay = Constant.driver
+								.findElements(By.xpath("//*[contains(@value,'" + ObjectTestDataCh + "')]"));
+					}
+					if(listDisplay.size()>0){
+						result = "\"" + ObjectTestDataCh + "\" is found";
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Executed);
+					}else{
+						result = "\"" + ObjectTestDataCh + "\" is not found";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Failed);
+					}
+				}
+				else {
+					Vars.elem = Vars.obj.findelement(Vars.obj.getLocator(ObjectValCh)) ;
+					if (Vars.elem != null) {
+						Vars.objFoundFlag = 1;
+						if (ObjectEventCh.equalsIgnoreCase(Constant.Equals) || ObjectEventCh.equalsIgnoreCase(Constant.NotEquals)
+								|| ObjectEventCh.equalsIgnoreCase(Constant.Contains) || ObjectEventCh.equalsIgnoreCase(Constant.Getattribute)) {
+							boolean bflag = false;
+							String elemAttribute = Vars.elem.getAttribute(objectType);
+							if(objectType.equals("href") && elemAttribute.contains("mailto:")){
+								elemAttribute = elemAttribute.split(":")[1];
+							}
+							if(ObjectTestDataCh.contains("#")){
+								ObjectTestDataCh = Vars.getTestdata().replace("#", "");
+							}
+							if (null != ObjectTestDataCh || !ObjectTestDataCh.isEmpty()) {
+								Vars.map.put(ObjectTestDataCh, elemAttribute);
+								bflag = true;
+							} else {
+								Vars.map.put(objectType, elemAttribute);
+								bflag = true;
+							}
+							if (bflag) {
+								result = "Attribute has been found";
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
+							} else {
+								result = "Attribute has not found";
+								Vars.setExecutionStatus(Constant.Failed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Failed);
+							}
+						}
+					}
 
+					else {
+							switch (ObjectEventCh.toLowerCase()) {
+							case Constant.Visible:
+								actval = "false";
+								break;
+							case Constant.Exist:
+								actval = "false";
+								break;
+							default:
+								result = "Object not found";
+								Vars.setExecutionStatus(Constant.Caution);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Missing);
+								break;
+							}
+							if (expval.equalsIgnoreCase(actval)) {
+								result = "Actual value matches with expected value. " + " Actual Value is " + actval
+										+ " and expected value is " + expval;
+								Vars.setExecutionResult(result);
+								Vars.setExecutionStatus(Constant.Passed);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
+							} else {
+								result = "Actual value does not matche with expected value. " + " Actual Value is "
+										+ actval + " and expected value is " + expval;
+								Vars.setExecutionResult(result);
+								Vars.setExecutionStatus(Constant.Failed);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Failed);
+							}
+						
+					}
+				}
+			}
+			//DEAD CODE WILL NEVER BE CALLED
+			//READING DATA FROM EXCEL CONSIDERING ALL THE VALUES ARE STORED THERE
 			if (Vars.objFoundFlag == 1) {
 				Vars.objFoundFlag = 0;
-
-				if (!ObjectSetValCh.isEmpty() && ObjectSetValCh.contains("dt_")) {
+				if (!ObjectTestDataCh.isEmpty() && ObjectTestDataCh.contains("dt_")) {
 					iflag = 0;
-					String ObjectSetValtableheader[] = ObjectSetValCh.split("_");
+					String ObjectTestDatatableheader[] = ObjectTestDataCh.split("_");
 					int column = 0;
-					String Searchtext = ObjectSetValtableheader[1];
+					String Searchtext = ObjectTestDatatableheader[1];
 					try {
-						DTcolumncountCh = Vars.DTsheet.getColCount();
-
+						DTcolumncountCh = Vars.TestData.getColCount();
 					} catch (NullPointerException e) {
 						return;
 					}
 					for (column = 0; column < DTcolumncountCh; column++) {
-						if(Searchtext.equalsIgnoreCase(Vars.DTsheet.getCellData(0, column))==true)
+						if(Searchtext.equalsIgnoreCase(Vars.TestData.getCellData(0, column))==true)
 						{
-							ObjectSetValCh = Vars.DTsheet.getCellData(Vars.row, column);
+							ObjectTestDataCh = Vars.TestData.getCellData(Vars.row, column);
 							iflag = 1;
-							if (ObjectSetValCh.length() == 0) {
-								ObjectSetValCh = "";
+							if (ObjectTestDataCh.length() == 0) {
+								ObjectTestDataCh = "";
 							}  
 						}
 					}
 					if (iflag == 0) {
-						ObjectSetValCh = "nodatarow";
+						ObjectTestDataCh = "nodatarow";
 						Vars.ORvalname = "exit";
 					}
 				}
-
-				/*if (ObjectSetValCh.contains("dt_")) {
-					String ObjectSetValtableheader[] = ObjectSetValCh
-							.split("_");
-					int column = 0;
-					String Searchtext = ObjectSetValtableheader[1];
-					DTcolumncountCh =Vars.DTsheet.getColCount();
-					for (column = 0; column < DTcolumncountCh; column++) {
-						if(Searchtext.equalsIgnoreCase(Vars.DTsheet.getCellData(0,column))==true)
-						{
-							ObjectSetValCh = Vars.DTsheet.getCellData(Vars.row,column);
-							iflag = 1;
-							if (ObjectSetValCh.length() == 0) {
-								ObjectSetValCh = "";
-							}
-						}
-					}
-					if (iflag == 0) {
-						Vars.ORvalname = "exit";
-					}
-				}*/
-
-				switch (ObjectSetCh.toLowerCase()) {
+				///////////////DEAD CODE
+				switch (ObjectEventCh.toLowerCase()) {
 				case Constant.Enabled:
 					if (objectType.equalsIgnoreCase("textbox")
 							|| objectType.equalsIgnoreCase("combobox")
@@ -628,41 +1464,42 @@ public class KeywordAction extends KeywordLibrary {
 							|| objectType.equalsIgnoreCase("table")
 							|| objectType.equalsIgnoreCase("link")
 							|| objectType.equalsIgnoreCase("element")) {
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 						boolval = Vars.elem.isEnabled();
 						actval = boolval.toString();
 					} else {
-						Reporter.ReportEvent(Constant.Property1);
+						result="Object not found";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Failed);
 					}
 					break;
 				case Constant.Text:
 					// Specifications change for STH 
 					if (objectType.equalsIgnoreCase("button")) {
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 						if (Vars.elem.getTagName().equalsIgnoreCase("button")) {
 							actval = Vars.elem.getText();
 						} else if (Vars.elem.getTagName().equalsIgnoreCase("input")) {
 							actval = Vars.elem.getAttribute("value");
 						} else {
-							Reporter.ReportEvent(Constant.Property1);
+							result="Object not found";
+							Vars.setExecutionStatus(Constant.Failed);
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setRes_type(Constant.Failed);
 						}
 					} else if (objectType.equalsIgnoreCase("textbox")
 							|| objectType.equalsIgnoreCase("textarea")) {
-
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 						actval = Vars.elem.getAttribute("value");
 
 					} else if (objectType.equalsIgnoreCase("textelement")
 							|| objectType.equalsIgnoreCase("element")) {
-
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 						actval = Vars.elem.getText();
+						if(!expval.equals(actval))
+							ObjectEventCh = "contains";
 
 					} else if (objectType.equalsIgnoreCase("combobox")
-							|| objectType.equalsIgnoreCase("listbox")
-							) {
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
-						// 2016-03-23 Multiple Selected Check Support
+							|| objectType.equalsIgnoreCase("listbox")) {
 						List<WebElement> selectedList = new Select(Vars.elem).getAllSelectedOptions();
 						actval = selectedList.get(0).getText();
 						if(selectedList.size() > 1) {
@@ -670,24 +1507,21 @@ public class KeywordAction extends KeywordLibrary {
 								actval += ":" + selectedList.get(i).getText();
 							}
 						}
-						/*
-						actval = new Select(elem).getFirstSelectedOption()
-								.getText().toString();
-						 */
 					} else {
-
-						Reporter.ReportEvent(Constant.Property1);
+						result="Object not found";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Failed);
 					}
 					break;
-				case Constant.Value:
-					// Specifications change for STH
+				case Constant.Value: //check/store value/text/enable/visible listbox/checkbox/radiobox/textbox/link as "ram:shayam:xx:yy:zz"
 					if(objectType.equalsIgnoreCase("checkbox")
 							|| objectType.equalsIgnoreCase("combobox")
-							|| objectType.equalsIgnoreCase("radiobutton")) {
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
+							|| objectType.equalsIgnoreCase("radiobutton")
+							|| objectType.equalsIgnoreCase("textbox")) {
 						actval = Vars.elem.getAttribute("value");
 					} else if(objectType.equalsIgnoreCase("listbox")) {
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 						List<WebElement> selectedList = new Select(Vars.elem).getAllSelectedOptions();
 						actval = selectedList.get(0).getAttribute("value");
 						if(selectedList.size() > 1) {
@@ -696,7 +1530,11 @@ public class KeywordAction extends KeywordLibrary {
 							}
 						}
 					} else {
-						Reporter.ReportEvent(Constant.Property1);
+						result="Value property not support for the object";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Failed);
 					}
 					break;
 				case Constant.Visible:
@@ -711,40 +1549,47 @@ public class KeywordAction extends KeywordLibrary {
 							|| objectType.equalsIgnoreCase("table")
 							|| objectType.equalsIgnoreCase("link")
 							|| objectType.equalsIgnoreCase("element")) {
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 						boolval = Vars.elem.isDisplayed();
 						actval = boolval.toString();
 					} else {
-						Reporter.ReportEvent(Constant.Property1);
+						result="Object not Found";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Failed);
 					}
-
 					break;
 				case Constant.Checked:
 					if ((objectType.equalsIgnoreCase("radiobutton")
 							|| objectType.equalsIgnoreCase("checkbox") || objectType
 							.equalsIgnoreCase("element"))) {
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 						boolval = Vars.elem.isSelected();
 						actval = boolval.toString();
 
 					} else {
-						Reporter.ReportEvent(Constant.Property1);
+						result="Object not selected";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Failed);
 					}
 					break;
 				case Constant.Linktext:
 					if (objectType.equalsIgnoreCase("link")) {
-						Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
-
 						actval = Vars.elem.getText();
 					} else {
-						Reporter.ReportEvent(Constant.Property1);
+						result="Link not found";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Failed);
 					}
 					break;
 				case Constant.Pagetitle:
 					if (ObjectValCh != "") {
 						actval = ObjectValCh;
 					} else {
-						actval = driver.getTitle();
+						actval = Constant.driver.getTitle();
 					}
 					break;
 
@@ -754,25 +1599,22 @@ public class KeywordAction extends KeywordLibrary {
 
 					if ((objectType.equalsIgnoreCase("page")) == true
 
-							&& (driver.getTitle().toString()
+							&& (Constant.driver.getTitle().toString()
 									.equalsIgnoreCase(ObjectValCh)) == true) {
-
 						actval = "true";
 					} else {
 						if (objectType.equalsIgnoreCase("page")) {
-
-							String currentWindowHandle = driver.getWindowHandle();
+							String currentWindowHandle = Constant.driver.getWindowHandle();
 							int windowFound = 0;
 							WebDriver newWindow = null;
 							Set<String> al = new HashSet<String>();
-							al = driver.getWindowHandles();
+							al = Constant.driver.getWindowHandles();
 							Iterator<String> windowIterator = al.iterator();
-
-							if (driver.getTitle().toString()
+							if (Constant.driver.getTitle().toString()
 									.equalsIgnoreCase(ObjectValCh) != true) {
 								while (windowIterator.hasNext()) {
 									String windowHandle = windowIterator.next();
-									newWindow = driver.switchTo().window(
+									newWindow = Constant.driver.switchTo().window(
 											windowHandle);
 									if (newWindow.getTitle().toString()
 											.equalsIgnoreCase(ObjectValCh) == true) {
@@ -781,23 +1623,20 @@ public class KeywordAction extends KeywordLibrary {
 										windowFound = 1;
 										break;
 									}
-
 								}
 								if (windowFound != 1) {
 									boolval = false;
-
 									actval = boolval.toString();
 								}
-								driver.switchTo().window(currentWindowHandle);
+								Constant.driver.switchTo().window(currentWindowHandle);
 							}
-
 						} else {
 
 							if (objectType.equalsIgnoreCase("dialog") == true) {
 								try {
 
 									Alert dialogExist = null;
-									dialogExist = driver.switchTo().alert();
+									dialogExist = Constant.driver.switchTo().alert();
 									if (dialogExist.toString() != null) {
 										boolval = true;
 										actval = boolval.toString();
@@ -805,22 +1644,15 @@ public class KeywordAction extends KeywordLibrary {
 										boolval = false;
 										actval = boolval.toString();
 									}
-
 								} catch (NoAlertPresentException e) {
-
 									boolval = false;
 									actval = boolval.toString();
-
 								}
-
 							}
 						}
-
 					}
-
 					break;
 				case Constant.Rowcount:
-					Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 					List<WebElement> rows = Vars.elem.findElements(By.tagName("tr"));
 					Integer rowCount = rows.size();
 					if (rowCount == 0) {
@@ -828,12 +1660,9 @@ public class KeywordAction extends KeywordLibrary {
 						rowCount = 1;
 					}
 					actval = rowCount.toString();
-					Reporter.ReportEvent(Constant.Property1);
 					break;
-
 				case Constant.Columncount:
 					WebElement headerRow = null;
-					Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 					List<WebElement> rows1 = Vars.elem
 							.findElements(By.tagName("tr"));
 					try {
@@ -869,43 +1698,50 @@ public class KeywordAction extends KeywordLibrary {
 								}
 							}
 						}
-
 					}
 					actval = colCount.toString();
-					Reporter.ReportEvent(Constant.Property1);
 					break;
 				case Constant.Getcelldata:
-
-					Vars.elem = driver.findElement(Vars.obj.getLocator(ObjectValCh)) ;
 					try {
 						List<WebElement> cellRows = Vars.elem.findElements(By
 								.tagName("tr"));
 						String cellData = "";
-						int rowNumber = Integer.parseInt(ObjectSetCh);
-						int colNumber = Integer.parseInt(ObjectSetValCh);
-						System.out.println("rownum - " + rowNumber
-								+ "  col num - " + colNumber);
+						int rowNumber = Integer.parseInt(ObjectEventCh);
+						int colNumber = Integer.parseInt(ObjectTestDataCh);
 						WebElement reqrow = cellRows.get(rowNumber - 1);
 						List<WebElement> reqcolmns = reqrow.findElements(By
 								.tagName("td"));
 						WebElement reqcellData = reqcolmns.get(colNumber - 1);
 						cellData = reqcellData.getText();
 						actval = cellData.toString();
-						//ObjectSetValCh = getCellArray[1];
+						result="Cell data has been found, rownum- "+ rowNumber
+								+ "  col num - " + colNumber;
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Executed);
 					} catch (Exception e) {
-						Reporter.ReportEvent(Constant.Getcelldata);
+						result="No cell data available";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Failed);
+						Vars.setExceptionVar(e.toString());
 					}
 					break;
-
+				case Constant.Getattribute:
+					break;
 				default:
 					actval = "Invalid syntax";
-					Reporter.ReportEvent(Constant.Property);
+					result="Invalid syntax";
+					Vars.setExecutionStatus(Constant.Blocked);
+					Vars.setExecutionResult(result);
+					screenShot(Vars);
+					Vars.setRes_type(Constant.Property);
 					break;
 				}
-
 				if ((Vars.getAction()).equalsIgnoreCase("check")) {
-					expval = ObjectSetValCh;
-					// Specifications change for STH 
+					expval = ObjectTestDataCh;
 					if (objectType.equalsIgnoreCase("radiobutton")) {
 						if (expval.equalsIgnoreCase("On")) {
 							expval = "True";
@@ -913,219 +1749,237 @@ public class KeywordAction extends KeywordLibrary {
 							expval = "False";
 						}
 					}
-
-					if (ObjectSetCh.equalsIgnoreCase("checked") 
-							|| ObjectSetCh.equalsIgnoreCase("visible")
-							|| ObjectSetCh.equalsIgnoreCase("enabled")
-							|| ObjectSetCh.equalsIgnoreCase("exist")) {
+					if (ObjectEventCh.equalsIgnoreCase("checked") 
+							|| ObjectEventCh.equalsIgnoreCase("visible")
+							|| ObjectEventCh.equalsIgnoreCase("enabled")
+							|| ObjectEventCh.equalsIgnoreCase("exist")) {
 						if (expval.equalsIgnoreCase(actval)) {
-							// Specifications change for STH 
-
-							System.out
-							.println("Actual value matches with expected value. "
+							result = "Actual value matches with expected value. "
 									+ " Actual Value is " + actval 
-									+ " and expected value is " + expval);
-
-							if (ObjectSetCh.equalsIgnoreCase("getcelldata")) {
-
-								Reporter.ReportEvent(Constant.Executed);
-							} else {
-								Reporter.ReportEvent(Constant.Executed, ObjectSetCh,
-										ObjectSetValCh);
+									+ " and expected value is " + expval;
+							if (ObjectEventCh.equalsIgnoreCase("getcelldata")) {
+								result="Object is visible";
+								screenShot(Vars);
 							}
+							Vars.setExecutionResult(result);
+							Vars.setExecutionStatus(Constant.Passed);
+							Vars.setRes_type(Constant.Executed);
+							/*else {
+								result="Object not found";
+								Vars.setExecutionStatus(Constant.Failed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Failed);
+							}*/
 							if (Constant.Vars.capturecheckvalue == true) {
 								screenShot(Vars);
 							}	
 						} else {
-
-							System.out
-							.println("Actual value doesn't match with expected value. Actual value is "
+							result = "Actual value doesn't match with expected value. Actual value is "
 									+ actval
 									+ " expected value is "
-									+ expval);
-
+									+ expval;
+							Vars.setExecutionResult(result);
 							if (Vars.ORvalname == "exit") {
-								Reporter.ReportEvent(Constant.Missing, ObjectSetCh,
-										ObjectSetValCh);
-
-							} else {
-								if (ObjectSetCh.equalsIgnoreCase("getcelldata")) {
-									Reporter.ReportEvent(Constant.Failed);
-								} else {
-									Reporter.ReportEvent(Constant.Failed, ObjectSetCh,
-											ObjectSetValCh);
-								}
-
-							}
-							if (Vars.capturecheckvalue == true) {
+								result="Object is missing ";
+								Vars.setExecutionStatus(Constant.Caution);
+								Vars.setExecutionResult(result);
 								screenShot(Vars);
-							}
+								Vars.setRes_type(Constant.Missing);
+							} 
 						}
 					} else {
-						if (expval.equals(actval)) {
-							// Specifications change for STH 
-							System.out
-							.println("Actual value matches with expected value. "
-									+ " Actual Value is " + actval 
-									+ " and expected value is " + expval);
-							if (ObjectSetCh.equalsIgnoreCase("getcelldata")) {
-
-								Reporter.ReportEvent(Constant.Executed);
-							} else {
-								Reporter.ReportEvent(Constant.Executed, ObjectSetCh,
-										ObjectSetValCh);
-							}
-							if (Vars.capturecheckvalue == true) {
+						if (ObjectEventCh.toLowerCase().contains("contains")){
+							if(actval.contains(expval)){
+								result="expected value contained in Actual value. "
+										+ " Actual Value is " + actval 
+										+ " and expected value is " + expval;
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setExecutionResult(result);
 								screenShot(Vars);
-							}	
-						} else {
-							System.out
-							.println("Actual value doesn't match with expected value. Actual value is "
-									+ actval
-									+ " expected value is "
-									+ expval);
-
-							if (Vars.ORvalname == "exit") {
-								Reporter.ReportEvent(Constant.Missing, ObjectSetCh,
-										ObjectSetValCh);
-
-							} else {
-								if (ObjectSetCh.equalsIgnoreCase("getcelldata")) {
-									Reporter.ReportEvent("failed");
-								} else {
-									Reporter.ReportEvent(Constant.Failed, ObjectSetCh,
-											ObjectSetValCh);
+								Vars.setRes_type(Constant.Executed);
+							}
+							else{
+								result="Expected value does not contained in actual. "
+										+ " Actual Value is " + actval 
+										+ " and expected value is " + expval;
+								Vars.setExecutionStatus(Constant.Failed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Failed);
+							}
+						}
+						else
+							if (expval.equals(actval)) {
+								result = "Actual value matches with expected value. "
+										+ " Actual Value is " + actval 
+										+ " and expected value is " + expval;
+								if (ObjectEventCh.equalsIgnoreCase("getcelldata")) {
+									result="Expected value matched with actual";
+									screenShot(Vars);
 								}
+								Vars.setExecutionResult(result);
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setRes_type(Constant.Executed);
+								/*else {
+									result="Expected value does not matched with actual";
+									Vars.setExecutionStatus(Constant.Failed);
+									Vars.setExecutionResult(result);
+									screenShot(Vars);
+									Vars.setRes_type(Constant.Failed);
+								}*/
+							} 
+							else if(ObjectEventCh.equalsIgnoreCase(Constant.Getattribute)){
+
 							}
-							if (Vars.capturecheckvalue == true) {
-								screenShot(Vars);
-							}
-						}						
+							else {
+								result = "Actual value doesn't match with expected value. Actual value is "
+										+ actval
+										+ " expected value is "
+										+ expval;
+								Vars.setExecutionResult(result);
+								if (Vars.ORvalname == "exit") {
+
+									result="Object is missing";
+									Vars.setExecutionStatus(Constant.Caution);
+									Vars.setExecutionResult(result);
+									screenShot(Vars);
+									Vars.setRes_type(Constant.Missing);
+								} else {
+									if (ObjectEventCh.equalsIgnoreCase("getcelldata")) {
+										result="No cell data available";
+										Vars.setExecutionStatus(Constant.Failed);
+										Vars.setExecutionResult(result);
+										screenShot(Vars);
+										Vars.setRes_type(Constant.Failed);
+									} else {
+										result="Can't read cell data" + ObjectEventCh + "and" + ObjectTestDataCh;
+										Vars.setExecutionStatus(Constant.Failed);
+										Vars.setExecutionResult(result);
+										screenShot(Vars);
+										Vars.setRes_type(Constant.Failed);
+									}
+								}
+							}						
 					}
-				} else if ((Vars.getAction()).equalsIgnoreCase("storevalue"))
-
-				{
-					varname = ObjectSetValCh;
-
+				} else if ((Vars.getAction()).equalsIgnoreCase("storevalue")) {
+					varname = ObjectTestDataCh.replace("#", "");
 					if (actval.equalsIgnoreCase("Invalid syntax")) {
-						Reporter.ReportEvent(Constant.Missing, ObjectSetCh, ObjectSetValCh);
-
+						result="Object is missing";
+						Vars.setExecutionStatus(Constant.Caution);
+						Vars.setExecutionResult(result);
+						screenShot(Vars);
+						Vars.setRes_type(Constant.Missing);
 					} else {
 						if (Vars.map.containsKey(varname)) {
 							Vars.map.remove(varname);
 							Vars.map.put(varname, actval);
-
-							if (ObjectSetCh.equalsIgnoreCase(Constant.Getcelldata)) {
-								Reporter.ReportEvent(Constant.Executed);
+							if (ObjectEventCh.equalsIgnoreCase(Constant.Getcelldata)) {
+								result="Value has been selected";
+								Vars.setExecutionStatus(Constant.Passed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Executed);
 							} else {
-								Reporter.ReportEvent(Constant.Executed, ObjectSetCh,
-										ObjectSetValCh);
+								result="Value has not been selected";
+								Vars.setExecutionStatus(Constant.Failed);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Failed);
 							}
-							System.out
-							.println("Overwriting the value of the variable "
+							/*Log.info("Overwriting the value of the variable : "
 									+ varname
-									+ " to store the value as mentioned in the test case row number"
-									+ Vars.row);
+									+ " to store the value as : "
+									+ Vars.map.get(varname));*/
 						} else {
 							Vars.map.put(varname, actval);
-							if (ObjectSetCh.equalsIgnoreCase(Constant.Getcelldata)) {
-								Reporter.ReportEvent(Constant.Executed);
-							} else {
-								Reporter.ReportEvent(Constant.Executed, ObjectSetCh,
-										ObjectSetValCh);
-							}
-							System.out
-							.println("Overwriting the value of the variable "
+							result="Value has been stored in the variable" + ObjectEventCh + "and" + ObjectTestDataCh;
+							Vars.setExecutionResult(result);
+							screenShot(Vars);
+							Vars.setExecutionStatus(Constant.Passed);
+							Vars.setRes_type(Constant.Executed);
+							/*else{
+								Vars.setExecutionStatus(Constant.Blocked);
+								Vars.setRes_type(Constant.Blocked);
+							}*/
+
+							/*Log.info("Overwriting the value of the variable : "
 									+ varname
-									+ " to store the value as mentioned in the test case row number"
-									+ Vars.row);
-							if (ObjectSetValCh.equals("nodatarow")) {
-								Reporter.ReportEvent(Constant.Missing);
+									+ " to store the value as : "
+									+ Vars.map.get(varname));*/
+							if (ObjectTestDataCh.equals("nodatarow")) {
+
+								result="Data is missing";
+								Vars.setExecutionStatus(Constant.Caution);
+								Vars.setExecutionResult(result);
+								screenShot(Vars);
+								Vars.setRes_type(Constant.Missing);
 							} else {
 
 							}
 						}
-					}
-					if (Constant.Vars.capturestorevalue == true) {
-						screenShot(Vars);
 					}
 				}
-
-			} else {
-				Reporter.ReportEvent(Constant.ObjectNotFound);
+			} else if(Vars.objFoundFlag == 0 && !bFound){
+				result="Element is missing in object repository";
+				Vars.setExecutionStatus(Constant.Caution);
+				Vars.setExecutionResult(result);
+				screenShot(Vars);
+				Vars.setRes_type(Constant.Caution);
 			}
 
 		} catch (Exception e) {
-			//	if (locatorError == 1) {
-
-			//	} else {
-
-			Reporter.ReportEvent(Constant.Failed, e);
-			//}
+			result="Object not found";
+			Vars.setExecutionStatus(Constant.Blocked);
+			Vars.setExecutionResult(result);
+			screenShot(Vars);
+			Vars.setRes_type(Constant.Blocked);
+			Vars.setExceptionVar(e.toString());
 		}
-
-	}
-
-	public static int ifContidionSkipper(String strifConditionStatus)
-			throws Exception {
-		try {
-			String strKeyword;
-			int intIfEndConditionCount, intIfConditionCount;
-			// String strKeyWord;
-			intIfConditionCount = 1;
-			intIfEndConditionCount = 0;
-
-			if (strifConditionStatus.equalsIgnoreCase("false")) {
-				// intLogicStartRow = j;
-
-				do {
-					Constant.Vars.row = Constant.Vars.row + 1;
-					strKeyword =Constant.Vars.TestRun.getCellData(Constant.Vars.row,1);
-					if (strKeyword.equalsIgnoreCase(Constant.Condition)) {
-						intIfConditionCount = intIfConditionCount + 1;
-					}
-
-					if (strKeyword.equalsIgnoreCase(Constant.Endcondition)) {
-						intIfEndConditionCount = intIfEndConditionCount + 1;
-
-						if (intIfConditionCount == intIfEndConditionCount) {
-							Constant.Vars.row= Constant.Vars.row + 1;
-							break;
-						}
-					}
-
-				} while (true);
-			}
-		} catch (Exception e) {
-			System.out.println(e);
-			Log.info( "Error Occured  in  ifContidionSkipper: " +e.getMessage());
-
-		}
-		return Constant.Vars.row;
 	}
 
 
+	/**
+	 * @param strOperation
+	 * @return
+	 * @throws Exception
+	 */
 	public static String func_IfCondition(String strOperation) throws Exception {
 
 		int iFlag = 1;
-		//String str[] = strConditionArgs.split(";");
-		//String value1 = str[0];
 		String value1 = Constant.Vars.Obj;
 		String value2 = Constant.Vars.Event.replaceAll("\"","");
-		//String strOperation = Constant.Vars.;
+		if(value2.contains("#")){
+			value2=Constant.Vars.map.get(value2.replace("#", ""));
+			if( value2==null){
+				value2="";				
+			}
+		}
 		strOperation = strOperation.toLowerCase().trim();
 		switch (strOperation.toLowerCase()) {
+		case "contains":
+			if (value1.substring(0, 1).equalsIgnoreCase("#")) {
+
+				value1 = Constant.Vars.map.get(value1.substring(1, (value1.length())));
+				result = "Variable used in condition statement has value: "
+						+ value1;
+				Constant.Vars.setExecutionStatus(result);
+				if (null != value1 && value1.trim().contains(value2.trim())) {
+					iFlag = 0;
+				}
+			} else if (value1.trim().contains(value2.trim())) {
+				iFlag = 0;
+			}
+			break;
 		case "=":
 		case "equals to":
 		case Constant.Equals:
 			if (value1.substring(0, 1).equalsIgnoreCase("#")) {
 
 				value1 = Constant.Vars.map.get(value1.substring(1, (value1.length())));
-				System.out
-				.println("Variable used in condition statement has value: "
-						+ value1);
-
-
+				result = "Variable used in condition statement has value: "
+						+ value1;
+				Constant.Vars.setExecutionStatus(result);
 				if (null != value1 && value1.trim().equalsIgnoreCase(value2.trim())) {
 
 					iFlag = 0;
@@ -1138,9 +1992,9 @@ public class KeywordAction extends KeywordLibrary {
 		case Constant.Notequals:
 			if (value1.substring(0, 1).equalsIgnoreCase("#")) {
 				value1 = Constant.Vars.map.get(value1.substring(1, (value1.length())));
-				System.out
-				.println("Variable used in condition statement has values: "
-						+ value1);
+				result  = "Variable used in condition statement has values: "
+						+ value1;
+				Constant.Vars.setExecutionStatus(result);
 				if (!value1.trim().equalsIgnoreCase(value2.trim())) {
 
 					iFlag = 0;
@@ -1151,6 +2005,7 @@ public class KeywordAction extends KeywordLibrary {
 			}
 			break;
 		case ">":
+		case Constant.Greater_than:
 		case Constant.Greaterthan:
 			if (value1.substring(0, 1).equalsIgnoreCase("#")) {
 				value1 = Constant.Vars.map.get(value1.substring(1, (value1.length())));
@@ -1168,10 +2023,14 @@ public class KeywordAction extends KeywordLibrary {
 			}
 
 			else {
-				System.out.println("Give Only Integers for Compare ");
+				result="Give Only Integers for Compare";
+				Constant.Vars.setExecutionStatus(Constant.Failed);
+				Constant.Vars.setExecutionResult(result);
+				Constant.Vars.setRes_type(Constant.Failed);
 			}
 			break;
 		case "<":
+		case Constant.Less_than:
 		case Constant.Lessthan:
 			if (value1.substring(0, 1).equalsIgnoreCase("#")) {
 				value1 = Constant.Vars.map.get(value1.substring(1, (value1.length())));
@@ -1189,91 +2048,112 @@ public class KeywordAction extends KeywordLibrary {
 			}
 
 			else {
-				Log.info( "Error Occured in lessthan : Give Only Integers for Compare" );
-				System.out.println("Give Only Integers for Compare ");
+				result="Error Occured in lessthan : Give Only Integers for Compare";
+				Constant.Vars.setExecutionStatus(Constant.Failed);
+				Constant.Vars.setExecutionResult(result);
+				Constant.Vars.setRes_type(Constant.Failed);
 			}
 			break;
 		default:
-			Reporter.ReportEvent(Constant.Missing);
+			result="Object is missing";
+			Constant.Vars.setExecutionStatus(Constant.Caution);
+			Constant.Vars.setExecutionResult(result);
+			Constant.Vars.setRes_type(Constant.Missing);
 			break;
 		}
 		if (iFlag == 0) {
-
+			result="Compare Successfull for " +value1;
+			Constant.Vars.setExecutionStatus(Constant.Passed);
+			Constant.Vars.setExecutionResult(result);
+			Constant.Vars.setRes_type(Constant.Executed);
 			return "true";
-
 		} else {
+			result="Compare failed for " +value1;
+			Constant.Vars.setExecutionResult(result);
 			return "false";
 		}
-
 	}
 
-	public static void arrayreSize() {
-		if (loopstart.length <= loopsize) {
-			loopstart = Arrays.copyOf(loopstart, loopstart.length + 1);
-			loopend = Arrays.copyOf(loopend, loopend.length + 1);
-			loopcnt = Arrays.copyOf(loopcnt, loopcnt.length + 1);
-			dtrownumloop = Arrays.copyOf(dtrownumloop, dtrownumloop.length + 1);
-			loopcount = Arrays.copyOf(loopcount, loopcount.length + 1);
-		}
-	}
-
+	/**
+	 * @param action1
+	 * @param Vars
+	 * @throws Exception
+	 */
 	private static void doUploadDownload(String action1,LocalTC Vars) throws Exception {
 		// Robot robot = new Robot();
 		String browserName = Vars.getbrowsername();
 		String cCellData = Vars.getObj();
 		if (browserName.equalsIgnoreCase("firefox")) {
 			switch (action1) {
-			case Constant.Upload:
+			case Constant.Upload: //uploading the external file in browser
 				try {
 					Thread.sleep(2000);
-					Runtime.getRuntime().exec(
-							Constant.execpath + " 2 upload " + cCellData + " "
-									+ browserName.toLowerCase());
-					Reporter.ReportEvent("executed");
-				} catch (IOException e) {
-					Log.info("Exception Occured: " +e.getMessage());
-					System.out.println(e);
+					/*
+					 * Runtime.getRuntime().exec( Constant.execpath +
+					 * " 2 upload " + cCellData + " " +
+					 * browserName.toLowerCase());
+					 */
+					cCellData = Constant.tempTestReportPath + cCellData;
+					cCellData = cCellData.replace("//", File.separator);
+					StringSelection strSelection = new StringSelection(cCellData);
+					Toolkit.getDefaultToolkit().getSystemClipboard().setContents(strSelection, null);
+
+					Robot robot = new Robot();
+					robot.keyPress(KeyEvent.VK_ENTER);
+					robot.keyRelease(KeyEvent.VK_ENTER);
+					robot.delay(1000);
+					robot.keyPress(KeyEvent.VK_CONTROL);
+					robot.keyPress(KeyEvent.VK_V);
+					robot.keyRelease(KeyEvent.VK_V);
+					robot.keyRelease(KeyEvent.VK_CONTROL);
+					robot.delay(1000);
+					robot.keyPress(KeyEvent.VK_ENTER);
+					robot.keyRelease(KeyEvent.VK_ENTER);
+					result = "File Uploaded";
+					Vars.setExecutionStatus(Constant.Passed);
+					Vars.setExecutionResult(result);
+					Vars.setRes_type(Constant.Executed);
+				} catch (Exception e) {
+					result = "Exception Occured in upload";
+					Vars.setExecutionStatus(Constant.Failed);
+					Vars.setExecutionResult(result);
+					Vars.setRes_type(Constant.Failed);
 				}
 				break;
-			case Constant.Abortupload:
-				try {
-					Runtime.getRuntime().exec(
-							Constant.execpath + " 2 closeupload " + "abort" + " "
-									+ browserName.toLowerCase());
-
-				} catch (IOException e) {
-					Log.info( "Exception Occured in abortupload- " +e.getMessage());
-					System.out.println(e);
-				}
+			case Constant.Abortupload: //abort uploading file
+				result="File upload aborted";
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setExecutionResult(result);
+				Vars.setRes_type(Constant.Executed);
 				break;
 
 			case Constant.Cancelupload:
-				try {
-					Runtime.getRuntime().exec(
-							Constant.execpath + " 2 cancelupload " + cCellData + " "
-									+ browserName.toLowerCase());
-					Reporter.ReportEvent("executed");
-				} catch (IOException e) {
-					Log.info( "Exception Occured in cancelupload- " +e.getMessage());
-					System.out.println(e);
-				}
+				/*Runtime.getRuntime().exec(
+						Constant.execpath + " 2 cancelupload " + cCellData + " "
+								+ browserName.toLowerCase());*/
+				result="File upload canceled";
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setExecutionResult(result);
+				Vars.setRes_type(Constant.Executed);
 				break;
 
 			case Constant.Download:
-				try {
-					Runtime.getRuntime().exec(
-							Constant.execpath + " 2 download " + ObjectSet + " "
-									+ browserName.toLowerCase() + " "
-									+ Vars.elem.getAttribute("href"));
-					Thread.sleep(4000);
-					Reporter.ReportEvent("executed");
-				} catch (IOException e) {
-					System.out.println("Error Occured in Dowload keyword execution  "+e.getMessage());
-					Log.info( "IOException Occured in download- " +e.getMessage()); 
-				}
+				/*Runtime.getRuntime().exec(
+						Constant.execpath + " 2 download " + ObjectEvent + " "
+								+ browserName.toLowerCase() + " "
+								+ Vars.elem.getAttribute("href"));*/
+				Constant.Vars.elem.click();
+				Thread.sleep(4000);
+				result="File Downloaded";
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setExecutionResult(result);
+				Vars.setRes_type(Constant.Executed);
 				break;
 			default:
-				System.out.println("Action not supported");
+				result = "Action not supported";
+				Vars.setExecutionStatus(Constant.Blocked);
+				Vars.setExecutionResult(result);
+				Vars.setRes_type(Constant.Blocked);
 				break;
 			}
 		} else if (browserName.equalsIgnoreCase("ie")) {
@@ -1281,51 +2161,66 @@ public class KeywordAction extends KeywordLibrary {
 			case Constant.Upload:
 				if (Integer.parseInt(Vars.getBrowserVer()) != 8) {
 					try {
-						Runtime.getRuntime().exec(
+						/*Runtime.getRuntime().exec(
 								Constant.execpath + " 2 upload " + cCellData + " "
-										+ browserName.toLowerCase());
-						Reporter.ReportEvent("executed");
-					} catch (IOException e) {
-						Log.info( "IOException Occured in upload- " +e.getMessage()); 
-						System.out.println(e);
+										+ browserName.toLowerCase());*/
+						StringSelection strSelection = new StringSelection(cCellData);
+						Toolkit.getDefaultToolkit().getSystemClipboard().setContents(strSelection, null);
+						Robot robot = new Robot();
+						robot.keyPress(KeyEvent.VK_ENTER);
+						robot.keyRelease(KeyEvent.VK_ENTER);
+						robot.delay(1000);
+						//press and release control and paste
+						robot.keyPress(KeyEvent.VK_CONTROL);
+						robot.keyPress(KeyEvent.VK_V);
+						robot.keyRelease(KeyEvent.VK_V);
+						robot.keyRelease(KeyEvent.VK_CONTROL);
+						robot.delay(1000);
+						//press and release enter
+						robot.keyPress(KeyEvent.VK_ENTER);
+						robot.keyRelease(KeyEvent.VK_ENTER);
+						result="IE Browser loaded";
+						Vars.setExecutionStatus(Constant.Passed);
+						Vars.setExecutionResult(result);
+						Vars.setRes_type(Constant.Executed);
+					} catch (Exception e) {
+						result="IOException Occured in upload";
+						Vars.setExecutionStatus(Constant.Failed);
+						Vars.setExecutionResult(result);
+						Vars.setRes_type(Constant.Failed);
 					}
 				} else {
 					Vars.elem.sendKeys(cCellData);
 				}
 				break;
 			case Constant.Closeupload:
-				try {
-					Runtime.getRuntime().exec(
-							Constant.execpath + " 2 closeupload " + cCellData + " "
-									+ browserName.toLowerCase());
-					Reporter.ReportEvent("executed");
-				} catch (IOException e) {
-					Log.info( "IOException Occured in closeupload- " +e.getMessage()); 
-					System.out.println(e);
-				}
+				/*Runtime.getRuntime().exec(
+						Constant.execpath + " 2 closeupload " + cCellData + " "
+								+ browserName.toLowerCase());*/
+				result="File upload canceled";
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setExecutionResult(result);
+				Vars.setRes_type(Constant.Executed);
 				break;
 			case Constant.Cancelupload:
-				try {
-					Runtime.getRuntime().exec(
-							Constant.execpath + " 2 cancelupload " + cCellData + " "
-									+ browserName.toLowerCase());
-					Reporter.ReportEvent("executed");
-				} catch (IOException e) {
-					Log.info( "IOException Occured in cancelupload- " +e.getMessage()); 
-					System.out.println(e);
-				}
+				/*Runtime.getRuntime().exec(
+						Constant.execpath + " 2 cancelupload " + cCellData + " "
+								+ browserName.toLowerCase());*/
+				result="Canceled uploaded file";
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setExecutionResult(result);
+				Vars.setRes_type(Constant.Executed);
 				break;
 			case Constant.Download:
-				try {
-					Runtime.getRuntime().exec(
-							Constant.execpath + " 2 download " + ObjectSet + " "
-									+ browserName.toLowerCase() + " "
-									+ Vars.elem.getAttribute("href"));
-					Reporter.ReportEvent("executed");
-				} catch (IOException e) {
-					System.out.println("IO exception occured in   download key woard "+e.getMessage());
-					Log.info( "IOException Occured in download- " +e.getMessage()); 
-				}
+				/*Runtime.getRuntime().exec(
+						Constant.execpath + " 2 download " + ObjectEvent + " "
+								+ browserName.toLowerCase() + " "
+								+ Vars.elem.getAttribute("href"));*/
+				Constant.Vars.elem.click();
+				result="File Downloaded";
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setExecutionResult(result);
+				Vars.setRes_type(Constant.Executed);
 				break;
 			}
 		}
@@ -1334,103 +2229,140 @@ public class KeywordAction extends KeywordLibrary {
 		}
 	}
 	/*
+	 * @return
+	 * @param LocalTC
 	 * Method for loop start
-	 */
+	 */ 
 	public static void loop(LocalTC Vars) throws IOException{
-		startrow = Vars.row;
-		dtrownum = 1;
-		loopsize = loopsize + 1;
-		if (loopsize >= 1) {
+		Vars.loopsize++; //Counter for counting the start of loops Total loops  
+		Vars.loopnum++;  //Counter to count start and end of it 
+		//Vars.dtrownum=1; //Reset the data row 
+		if (Vars.loopsize >= 0) {
 			arrayreSize();
 		}
-		loopflag = 1;
-		loopcount[loopsize] = Integer.parseInt(Vars.getObj());
-		loopstart[loopsize] = Vars.row;
-		loopcnt[loopsize] = 0;
-		dtrownumloop[loopsize] = dtrownum;
-		Reporter.ReportEvent("loop : " + "Start of loop : " + (loopsize + 1));
-		Reporter.ReportEvent(Constant.Executed);
+		Vars.loopflag = 1;
+		Vars.dtrownumloop[Vars.loopsize] = 1;
+		Vars.loopcount[Vars.loopsize] = Integer.parseInt(Vars.getObj());
+		Vars.loopstart[Vars.loopsize] = ++Vars.startrow;
+		Vars.loopcnt[Vars.loopsize] = 0;
+		Vars.loopTestData[Vars.loopsize] = Vars.getSampleData().replace("dt_", "");
+		result="loop : " + "Start of loop : " + (Vars.loopsize + 1);
+		Vars.setExecutionStatus(Constant.Passed);
+		Vars.setExecutionResult(result);
+		Vars.setRes_type(Constant.Executed);
 	}
-	
+
+	public static void arrayreSize() {
+		if (Constant.Vars.loopstart.length <= Constant.Vars.loopsize) {
+			Constant.Vars.loopstart = Arrays.copyOf(Constant.Vars.loopstart, Constant.Vars.loopstart.length + 1);
+			Constant.Vars.loopend = Arrays.copyOf(Constant.Vars.loopend, Constant.Vars.loopend.length + 1);
+			Constant.Vars.loopcnt = Arrays.copyOf(Constant.Vars.loopcnt, Constant.Vars.loopcnt.length + 1);
+			Constant.Vars.dtrownumloop = Arrays.copyOf(Constant.Vars.dtrownumloop, Constant.Vars.dtrownumloop.length + 1);
+			Constant.Vars.loopcount = Arrays.copyOf(Constant.Vars.loopcount, Constant.Vars.loopcount.length + 1);
+			Constant.Vars.loopTestData = Arrays.copyOf(Constant.Vars.loopTestData, Constant.Vars.loopcount.length + 1);
+		}
+	}
+
 	/*
+	 * @return
+	 * @param LocalTC
 	 * Method for loop end
 	 */
-	public static void endloop(LocalTC Vars) throws IOException{
-		loopcnt[loopsize] = loopcnt[loopsize] + 1;
-		loopnum = loopnum + 1;
-		if (loopcnt[loopsize] == loopcount[loopsize]) {
-			Reporter.ReportEvent(
-					"loop" + " End of Loop : " + (loopsize + 1) + " : Loop count : " + loopcnt[loopsize]);
-			loopsize = loopsize - 1;
-			if (loopsize >= 0)
-				dtrownum = dtrownumloop[loopsize];
-			else {
-				dtrownum = 1;
-				loopflag = 0;
-			}
-			Reporter.ReportEvent(Constant.Executed);
-		} else {
-			Vars.row = loopstart[loopsize];
-			dtrownum = dtrownum + 1;
-			dtrownumloop[loopsize] = dtrownum;
-			Reporter.ReportEvent(
-					"loop" + " End of Loop : " + (loopsize + 1) + " : Loop count : " + loopcnt[loopsize]);
+	public static void endloop(LocalTC Vars) throws Exception{
+		Vars.loopend[Vars.loopnum] = Vars.startrow;
+		Vars.dtrownumloop[Vars.loopnum] = Vars.startrow + 1;
+		Vars.loopnum = Vars.loopnum - 1;
+		//Log.info("End of Loop : " + Vars.loopsize +1 + " : Loop count : " + Vars.loopcount[Vars.loopsize]);
+		if (Vars.loopnum == -1){
+			Vars.loopflag = 0;
+			Vars.loopnum  = 0;
+			KeywordLibrary.execloopsteps(Vars,0,Vars.startrow-1,Vars.loopcount[0]);
+			Resetloop();
 		}
-		rowcnt = 1;
+		result="End of Loop : " + Vars.loopsize +1 + " : Loop count : " + Vars.loopcount[Vars.loopsize];
+		Vars.setExecutionStatus(Constant.Passed);
+		Vars.setExecutionResult(result);
+		Vars.setRes_type(Constant.Executed);
 	}
-	/*
+	/**
+	 * @param vars
+	 * @throws Exception
 	 * method for creating condition as per the teststep
 	 */
 	private static void condition(LocalTC vars) throws Exception {
 		String strConditionStatus = func_IfCondition(vars.getObjProp());
-		if (strConditionStatus.equalsIgnoreCase("false")) {
-			conditionline = vars.row;
-			vars.row = ifContidionSkipper(strConditionStatus);
-			vars.row = vars.row - 1;
-		}
-		if (strConditionStatus.equalsIgnoreCase("false")) {
-			Reporter.ReportEvent(Constant.CondFailed);
+		if (strConditionStatus.equalsIgnoreCase("false"))
+		{
+			Constant.Vars.conditionSkip = true;
+			result="Condition is false ";
+			vars.setExecutionStatus("Skipped");
+			vars.setExecutionResult(result);
+			vars.setRes_type(Constant.CondFailed);
 		} else {
-			Reporter.ReportEvent(Constant.Executed);
+			result="Condition is true ";
+			vars.setExecutionStatus(Constant.Passed);
+			vars.setExecutionResult(result);
+			screenShot(vars);
+			vars.setRes_type(Constant.Executed);
 		}
 	}
-	/*
+	/**
+	 * @param vars
+	 * @throws IOException
 	 * Method for the screen capture
 	 */
 	public static void screenCaptureOption(LocalTC vars) throws IOException{
-			if (vars.getObjProp().equalsIgnoreCase(Constant.Perform)) {
-				Constant.Vars.captureperform = true;
-			}
-			if (vars.getObjProp().equalsIgnoreCase(Constant.Storevalue)) {
-				Constant.Vars.capturestorevalue = true;
-			}
-			if (vars.getObjProp().equalsIgnoreCase(Constant.Check)) {
-				Constant.Vars.capturecheckvalue = true;
-			}
-		Reporter.ReportEvent(Constant.Executed);
+		if (vars.getObjProp().equalsIgnoreCase(Constant.Perform)) {
+			Constant.Vars.captureperform = true;
+		}
+		if (vars.getObjProp().equalsIgnoreCase(Constant.Storevalue)) {
+			Constant.Vars.capturestorevalue = true;
+		}
+		if (vars.getObjProp().equalsIgnoreCase(Constant.Check)) {
+			Constant.Vars.capturecheckvalue = true;
+		}
+		Constant.Vars.setRes_type(Constant.Executed);
+		vars.setExecutionStatus(Constant.Passed);
 	}
-	/*
-	 * method for importing data from given path
+	/**
+	 * @param vars
+	 * @throws IOException
+	 * method for importing data from given file path
 	 */
 	public static void importdata(LocalTC vars) throws IOException {
+		FileInputStream fs3 = null;
+		XSSFWorkbook DTworkbook = null;
 		try {
 			String xcelpath = vars.getObj().replaceAll("\"", "").trim();
-			FileInputStream fs3 = null;
 			fs3 = new FileInputStream(new File(xcelpath));
-			XSSFWorkbook DTworkbook = new XSSFWorkbook(fs3);
+			DTworkbook = new XSSFWorkbook(fs3);
 			FormulaEvaluator DTevaluator = DTworkbook.getCreationHelper().createFormulaEvaluator();
 			// if(Constant.Vars.update.equalsIgnoreCase("yes")){
 			DTevaluator.evaluateAll();
 			// }
-			vars.ws = DTworkbook.getSheetAt(0);
-			Reporter.ReportEvent(Constant.Executed);
+			LocalTC.ws = DTworkbook.getSheetAt(0);
+			result="Data table found ";
+			vars.setExecutionStatus(Constant.Passed);
+			vars.setExecutionResult(result);
+			vars.setRes_type(Constant.Executed);
+
 		} catch (Exception e) {
-			Log.info("Error Occured in importdata : No Data table found  " + e.getMessage());
-			Reporter.ReportEvent(Constant.Nodatatable);
+			result="Error Occured in importdata : No Data table found  ";
+			vars.setExecutionStatus(Constant.Blocked);
+			vars.setExecutionResult(result);
+			vars.setRes_type(Constant.Nodatatable);
+		}finally {
+			if(fs3 != null){
+				fs3.close();
+			}if(DTworkbook != null){
+				DTworkbook.close();
+			}
 		}
 	}
+
 	
-	/*
+	/**
+	 * @param vars
 	 * Method for fetching data form database
 	 */
 	public static void fetchdb(LocalTC vars){
@@ -1441,23 +2373,29 @@ public class KeywordAction extends KeywordLibrary {
 				vars.isinvaliddb = true;
 			}else{
 				vars.isinvaliddb=false;
-				Reporter.ReportEvent(Constant.InvalidConnection);
+				result="Database connection is not established ";
+				vars.setExecutionStatus(Constant.Blocked);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.InvalidConnection);
 				return;
 			}
 			if(vars.host_name.length()==0){
-				System.out.println("Please Enter Host Name");
 				vars.isinvaliddb=false;
-				Reporter.ReportEvent(Constant.InvalidConnection);
+				result="Database connection is not established, Host Name is empty ";
+				vars.setExecutionStatus(Constant.Blocked);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.InvalidConnection);
 				return;
 			}
 			if((vars.schemaname.length()==0)){
-				System.out.println("Please Enter Schema Name");
 				vars.isinvaliddb=false;
-				Reporter.ReportEvent(Constant.InvalidConnection);
+				result="Database connection is not established, schema name is empty ";
+				vars.setExecutionStatus(Constant.Blocked);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.InvalidConnection);
 				return;
 			}
-			String substr_query = (sqlquery.trim()).substring(0,6);
-			System.out.println("Query is  "+sqlquery);
+			(sqlquery.trim()).substring(0,6);
 			if(sqlquery.length()>0){
 				String query = sqlquery.trim();
 				String isSelect = query.substring(0, 6);
@@ -1465,12 +2403,17 @@ public class KeywordAction extends KeywordLibrary {
 					parameter=true;
 				}
 			}else{
-				System.out.println("SQL query is not given, Please enter SQL query ");
-				Reporter.ReportEvent(Constant.InvalidQuery);
+				result="SQLquery is not correct";
+				vars.setExecutionStatus(Constant.Blocked);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.InvalidQuery);
 				return;
 			}
 			if(parameter == true){
-				Reporter.ReportEvent(Constant.InvalidQuery);
+				result="SQLquery is not correct ";
+				vars.setExecutionStatus(Constant.Blocked);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.InvalidQuery);
 				return;
 			}
 			String url =KeywordLibrary.createConnection(vars, vars.database, vars.schemaname, vars.username, vars.password);
@@ -1479,16 +2422,27 @@ public class KeywordAction extends KeywordLibrary {
 			}
 			if(vars.isconnected){
 				executeQuery(Constant.Vars.rs);
-				Reporter.ReportEvent(Constant.Executed);
+				result="Database connection is established ";
+				vars.setExecutionStatus(Constant.Passed);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.Executed);
 			}else{
-				Reporter.ReportEvent(Constant.InvalidConnection);
+				result="Database connection is not established ";
+				vars.setExecutionStatus(Constant.Blocked);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.InvalidConnection);
 				vars.isinvaliddb = false;
 			}
 		}catch (Exception e){
-			Log.info("failed  " +e.getMessage() );
-			System.out.println(e.getMessage());
+			result="failed  " +e.getMessage() ;
+			vars.setExecutionStatus(Constant.Blocked);
+			vars.setExecutionResult(result);
+			vars.setRes_type(Constant.InvalidConnection);
 		}
 	}
+	/**
+	 * @param Vars
+	 */
 	public static void callfunction(LocalTC Vars){
 		try {
 			if(Vars.getObjProp().contains("#")){}
@@ -1497,26 +2451,22 @@ public class KeywordAction extends KeywordLibrary {
 				Vars.TestData.setExcelFile(Constant.Path_TestData, Vars.getObjProp().replace("dt_", ""));
 				int retRowCount=Vars.TestData.getRowCount();
 				int retColCount =Vars.TestData.getColCount();
-				//Params = Vars.TestData.getCellData(1, 0);
 				for(int rowItr=1;rowItr<retRowCount;rowItr++)
 				{
 					Params = "";
-					/*for(int colItr=0;Vars.TestData.getCellData(rowItr, colItr)!="";colItr++){
-						Params = Params + "," + Vars.TestData.getCellData(rowItr, colItr) ;
-					}*/
 					for(int colItr=0;colItr<retColCount;colItr++){
 						if(Vars.TestData.getCellData(rowItr, colItr) == null){
 							if(Params.isEmpty()){
 								Params = null;
 							}
 							else if(null != Params)
-								Params = Params + "," + null;
+								Params = Params + "#&" + null;
 						}
 						else
 							if(null != Params && Params.isEmpty())
 								Params = Vars.TestData.getCellData(rowItr, colItr);
 							else
-								Params = Params + "," + Vars.TestData.getCellData(rowItr, colItr) ;
+								Params = Params + "#&" + Vars.TestData.getCellData(rowItr, colItr) ;
 					}
 					func_InvokeFunction(Vars.getObj(), Params);
 				}
@@ -1525,69 +2475,88 @@ public class KeywordAction extends KeywordLibrary {
 		} catch (Exception e) {
 		}
 	}
+	/**
+	 * @param vars
+	 */
 	public static void comparedbcell(LocalTC vars){
 		try{
 			if(vars.isinvaliddb){
 				vars.setScreenshotTypeFlag(0);
 				WebElement getElement = getWebElement();
 				if(getElement==null){
-					System.out.println(" No matching Element found in Object Repository");
-					Reporter.ReportEvent(Constant.ObjectNotFound);
+					result="No matching Element found in Object Repository";
+					vars.setExecutionStatus(Constant.Blocked);
+					vars.setExecutionResult(result);
+					screenShot(vars);
+					vars.setRes_type(Constant.ObjectNotFound);
 					return;
 				}
 				String toSearch = getElement.getText();
 				boolean isfound = search_Excel(toSearch);
 				if(isfound){
-					Reporter.ReportEvent(Constant.Executed);
+					result="Object found";
+					vars.setExecutionStatus(Constant.Passed);
+					vars.setExecutionResult(result);
+					vars.setRes_type(Constant.Executed);
 				}else{
-					Reporter.ReportEvent(Constant.NoMatchinDataTable);
+					result="Data is not matching with data table";
+					vars.setExecutionStatus(Constant.Blocked);
+					vars.setExecutionResult(result);
+					vars.setRes_type(Constant.NoMatchinDataTable);
 				}
 			}else{
-				System.out.println("Basic parameters are invalid");
-				Reporter.ReportEvent(Constant.InvalidConnection);
+				result="Invalid parameters";
+				vars.setExecutionStatus(Constant.Blocked);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.InvalidConnection);
 			}
 		}
 		catch(Exception e){
-			Log.info( "Exception Occured in comparedbcell : No Data table found  " +e.getMessage() );
-			System.out.println("Exception Occured as -"+e.getMessage());
-			//Reporter.ReportEvent("NoMatchinDataTable");
+			result="Exception Occured in comparedbcell : No Data table found  " +e.getMessage();
+			vars.setExecutionStatus(Constant.Blocked);
+			vars.setExecutionResult(result);
+			vars.setRes_type(Constant.InvalidConnection);
 		}
 	}
+	/**
+	 * @return
+	 */
 	public static WebElement getWebElement(){
 		try{
-			String objectType = Constant.Vars.getObj();     
+			Constant.Vars.getObj();     
 			String ObjectValCh = Constant.Vars.getObjProp();
 			try {
-				Constant.Vars.elem = driver.findElement(Constant.Vars.obj.getLocator(ObjectValCh));
+				Constant.Vars.elem = Constant.Vars.obj.findelement(Constant.Vars.obj.getLocator(ObjectValCh));
 				return Constant.Vars.elem;
 			} catch (Exception e) {
-				System.out.println("Error Occured While getting Element-  "+e.getMessage());
-				Log.info( "Error Occured While getting Element- " +e.getMessage());
+				e.printStackTrace();
 			}
 		}catch(Exception e){
-			System.out.println("Exception Occured as -"+e.getMessage());
-			Log.info( "Exception Occured as- " +e.getMessage());
+			//Log.info( "Exception Occured as- " +e.getMessage());
+			e.printStackTrace();
 		}
 		return Constant.Vars.elem;
 	}
+	/**
+	 * @param toSearch
+	 * @return
+	 */
 	public static boolean search_Excel(String toSearch){
 		boolean isfound=false;
-		String ObjectSetCh = Constant.Vars.getEvent();                             
-		String ObjectSetValCh = Constant.Vars.getTestdata();
+		Constant.Vars.getEvent();                             
+		String ObjectTestDataCh = Constant.Vars.getTestdata();
 		boolean columnFound = false;
-		String compare = null;
 		int columnno =0;
 		String getColumn = null;
-		if (ObjectSetValCh.contains("dt_")) {
+		if (ObjectTestDataCh.contains("dt_")) {
 			Constant.Vars.iflag = 0;
-			String ObjectSetValtableheader[] = ObjectSetValCh
+			String ObjectTestDatatableheader[] = ObjectTestDataCh
 					.split("_",2);
-			int column = 0;
-			String Searchincolumn = ObjectSetValtableheader[1];
-			Row row = Constant.Vars.ws.getRow(0);
+			String Searchincolumn = ObjectTestDatatableheader[1];
+			Row row = LocalTC.ws.getRow(0);
 			int cell = row.getLastCellNum();
 			for(int i=0;i<cell;i++){
-				getColumn = (Constant.Vars.ws.getRow(0).getCell(i).getStringCellValue());
+				getColumn = (LocalTC.ws.getRow(0).getCell(i).getStringCellValue());
 				if(getColumn.equalsIgnoreCase(Searchincolumn)){
 					columnFound = true;
 					break;
@@ -1595,14 +2564,14 @@ public class KeywordAction extends KeywordLibrary {
 			}                                                            
 			if((columnFound == true)&&(columnno!=0)){
 				int rowcnt = 0;
-				for(Row r : Constant.Vars.ws){
-					rowcnt= Constant.Vars.ws.getLastRowNum();
+				for(Row r : LocalTC.ws){
+					rowcnt= LocalTC.ws.getLastRowNum();
 				}
-				System.out.println("Row Count is  "+rowcnt);
+				//Log.info("Row Count is  "+rowcnt);
 				for(int i=0;i<rowcnt;i++){
-					String getCelldata = Constant.Vars.ws.getRow(i).getCell(columnno).getStringCellValue();
+					String getCelldata = LocalTC.ws.getRow(i).getCell(columnno).getStringCellValue();
 					if(getCelldata.equalsIgnoreCase(toSearch)){
-						System.out.println("Script Found  "+getCelldata);
+						//Log.info("Script Found  "+getCelldata);
 						isfound = true;
 					}
 				}
@@ -1610,115 +2579,147 @@ public class KeywordAction extends KeywordLibrary {
 		}
 		return isfound;
 	}
-	
+
+	/**
+	 * @param vars
+	 * @throws Exception
+	 */
 	public static void screencapture(LocalTC vars) throws Exception{
 		vars.setScreenshotTypeFlag(0);
 		screenShot(vars);
-		Reporter.ReportEvent(Constant.Executed);
+		result="Screenshot is captured";
+		vars.setExecutionStatus(Constant.Passed);
+		vars.setExecutionResult(result);
+		vars.setRes_type(Constant.Executed);
 	}
-	
+
+	/**
+	 * @param vars
+	 * Downloading the file from the browser
+	 */
 	public static void download(LocalTC vars){
-		cCellObjName = vars.getObjProp().replace("obj=", "").toLowerCase();
-		cCellObjType = vars.getObj(); 
-		ObjectSet = vars.Event.toLowerCase();
-		ObjectSetVal=vars.getTestdata().replace("\"", "");
-		String[] ObjectSet1=null;
-		String ObjectSet2 = null;
+		ObjectName = vars.getObjProp().replace("obj=", "").toLowerCase();
+		ObjectType = vars.getObj(); 
+		ObjectEvent = vars.Event.toLowerCase();
+		ObjectTestData=vars.getTestdata().replace("\"", "");
+		String[] ObjectEvent1=null;
+		String ObjectEvent2 = "";
 		try {
 			readAttributeforPerform();
-			vars.elem = driver.findElement(vars.obj.getLocator(cCellObjName));
+			vars.elem = vars.obj.findelement(vars.obj.getLocator(ObjectName));
 			if (vars.elem == null) {
 				return;
 			} else {
-				if (ObjectSet == "") {
-					Reporter.ReportEvent(Constant.FilePathNotFound2);
-				} else {
-					try {
-						ObjectSet1 = ObjectSet.split("\\\\");
-					} catch (Exception e2) {
-						System.out.println(e2);
-					}
-					for (int i = 0; i < ObjectSet1.length - 1; i++) {
-						ObjectSet2 = ObjectSet2 + ObjectSet1[i] + "\\";
-					}
-					if (new File(ObjectSet2.toString()).exists()) {
-						doUploadDownload(Constant.Download,vars);
-					} else {
-						Reporter.ReportEvent(Constant.FilePathNotFound1);
-					}
-					ObjectSet2 = "";
-					ObjectSet1 = null;
+				/*if (ObjectEvent == "") {
+					vars.setRes_type(Constant.FilePathNotFound2);
+					//Reporter.ReportEvent(Constant.FilePathNotFound2);
+					vars.setExecutionStatus("Failed");
+				} else {*/
+				try {
+					ObjectEvent1 = ObjectEvent.split("\\\\");
+				} catch (Exception e2) {
+					e2.printStackTrace();
 				}
+				for (int i = 0; i < ObjectEvent1.length; i++) {
+					ObjectEvent2 = ObjectEvent2 + ObjectEvent1[i] + "\\";
+				}
+				if (new File(ObjectEvent2.toString()).exists()) {
+					doUploadDownload(Constant.Download,vars);
+				} else {
+
+					result="File path is not found";
+					vars.setExecutionStatus(Constant.Blocked);
+					vars.setExecutionResult(result);
+					vars.setRes_type(Constant.FilePathNotFound1);
+				}
+				ObjectEvent2 = "";
+				ObjectEvent1 = null;
 			}
 		} catch (Exception e) {
-			Log.info( "Error Occured in Download :   " +e.getMessage() );
-			System.out.println(e);
+			result="Error Occured in Download :   " +e.getMessage() ;
+			vars.setExecutionStatus(Constant.Blocked);
+			vars.setExecutionResult(result);
+			vars.setRes_type(Constant.FilePathNotFound1);
 		}
 	}
+	/**
+	 * 
+	 */
 	public static void readAttributeforPerform(){
 		try {
 			int DTcolumncount =0;
-			if (ObjectSetVal.length() > 0)
+			if (ObjectTestData.length() > 0)
 			{
-				if (ObjectSetVal.substring(0, 1).equalsIgnoreCase("#")) {
-					if (Constant.Vars.map.get(ObjectSetVal.substring(1,
-							(ObjectSetVal.length()))) != null) {
-						ObjectSetVal = Constant.Vars.map.get(ObjectSetVal.substring(1,
-								(ObjectSetVal.length())));
+				if (ObjectTestData.substring(0, 1).equalsIgnoreCase("#")) {
+					if (Constant.Vars.map.get(ObjectTestData.substring(1,
+							(ObjectTestData.length()))) != null) {
+						ObjectTestData = Constant.Vars.map.get(ObjectTestData.substring(1,
+								(ObjectTestData.length())));
 					} else {
-						ObjectSetVal = "";
+						ObjectTestData = "";
 					}
-				} else if (ObjectSetVal.contains("dt_")) {
+				} else if (ObjectTestData.contains("dt_")) {
 					DTcolumncount = Constant.Vars.DTsheet.getColCount();
 					Constant.Vars.iflag = 0;
-					String ObjectSetValtableheader[] = ObjectSetVal.split("_");
+					String ObjectTestDatatableheader[] = ObjectTestData.split("_");
 					int column = 0;
-					String Searchtext = ObjectSetValtableheader[1];
+					String Searchtext = ObjectTestDatatableheader[1];
 					for (column = 0; column < DTcolumncount; column++) {
 						if(Searchtext.equalsIgnoreCase(Constant.Vars.DTsheet.getCellData(Constant.Vars.row,column))==true)
 						{
-							ObjectSetVal = Constant.Vars.DTsheet.getCellData(Constant.Vars.row,column);;
-							if (ObjectSetVal.length() == 0) {
-								ObjectSetVal = "";
+							ObjectTestData = Constant.Vars.DTsheet.getCellData(Constant.Vars.row,column);;
+							if (ObjectTestData.length() == 0) {
+								ObjectTestData = "";
 							}
 							Constant.Vars.iflag = 1;
 						}
 					}
 					if (Constant.Vars.iflag != 1) {
-						ObjectSetVal = "nodatarow";
+						ObjectTestData = "nodatarow";
 					}
 					else {
-						Reporter.ReportEvent("toomanyarguments");
+						result="Object not found";
+						Constant.Vars.setExecutionStatus(Constant.Blocked);
+						Constant.Vars.setExecutionResult(result);
+						Constant.Vars.setRes_type(Constant.TooManyArguments);
 					}
 				}
 			}
 		} catch (Exception e) {
-			System.out.println(" Error Occured while Reading Attribute for Perform  "+e.getMessage());
-			Log.info( "Exception Occured while Reading Attribute for Perform- " +e.getMessage());
+			result="Exception Occured while Reading Attribute for Perform- " +e.getMessage();
+			Constant.Vars.setExecutionStatus(Constant.Failed);
+			Constant.Vars.setExecutionResult(result);
+			Constant.Vars.setRes_type(Constant.Failed);
 		}
 	}
+	/**
+	 * @param vars
+	 * @throws Exception
+	 */
 	public static void varCallaction(LocalTC vars) throws Exception{
 		vars.reporttype = 1;
 		vars.exeStatus = "Pass";
 		//String ComponentPath = vars.reusableComponents + cCellData;
 		if (vars.getObj().contains("xlsx")) {
 			String ComponentName = vars.getObj().split(".xlsx")[0];
-			//XSSFSheet  TestScriptSheet = TScsheet;
 			FileInputStream ComponentFile1 = null;
+			XSSFWorkbook  ComponentWorkBook = null;
 			try {
 				ComponentFile1 = new FileInputStream(new File(vars.getObj()));
-				XSSFWorkbook  ComponentWorkBook = new XSSFWorkbook(ComponentFile1);
+				ComponentWorkBook = new XSSFWorkbook(ComponentFile1);
 				XSSFSheet ComponentSheet = ComponentWorkBook.getSheetAt(0);
 				int ComponentRowCount = 0;
 				int introwcnt = 0;
 				int introwcntStore = vars.row;
-				Reporter.ReportEvent(Constant.Executed);
+				result="Function called";
+				vars.setExecutionStatus(Constant.Passed);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.Executed);
 				vars.row = vars.row + 1;
-				//TScsheet = ComponentSheet;
 				Stack<String> ComponentStack = new Stack<String>();
 				vars.setObj(ComponentName);
 				ComponentStack.push(ComponentName);
-				Reporter.ReportEvent(Constant.Callactionstart);
+				/*vars.setRes_type(Constant.Callactionstart);*/
 				ComponentRowCount = ComponentSheet.getLastRowNum();
 				introwcnt = 0;
 				for (int jloop = 0; jloop < ComponentRowCount; jloop++) {
@@ -1739,7 +2740,7 @@ public class KeywordAction extends KeywordLibrary {
 							//		new File(ORPath));
 
 						} catch (Exception e) {
-							System.out.println("File not found");
+							e.printStackTrace();
 						}
 						try {
 
@@ -1751,26 +2752,48 @@ public class KeywordAction extends KeywordLibrary {
 						} catch (Exception e) {
 							fail("Excel file of Ignite is not correct.");
 						}
-						System.out.println(vars.Action + "||" + vars.getObj()
-								+ "||" + vars.getObjProp());
 						CallAction(vars);
 						//bCellAction(scriptName);
 						jloop = vars.row;
 					}// End of Execution
 				}// End of If that get all rows in Test Script
 				vars.setObj(ComponentStack.pop());
-				Reporter.ReportEvent(Constant.Callactionend);
+
+				/*result="Function not called";
+				Constant.Vars.setExecutionStatus("Failed");
+				Constant.Vars.setExecutionResult(result);
+				vars.setRes_type(Constant.Callactionend);*/
+				//Reporter.ReportEvent(Constant.Callactionend);
+				//Constant.Vars.setExecutionStatus("Failed");
 				vars.row = introwcntStore;
 				vars.reporttype = 0;
 				//TScsheet = TestScriptSheet;
 			} catch (FileNotFoundException FNF1) {
-				Reporter.ReportEvent(Constant.Callactionfnf);
+				result="Function not called";
+				Constant.Vars.setExecutionStatus(Constant.Blocked);
+				Constant.Vars.setExecutionResult(result);
+				vars.setRes_type(Constant.Callactionfnf);
+				//Reporter.ReportEvent(Constant.Callactionfnf);
+			}finally{
+				if (ComponentFile1!=null) {
+					ComponentFile1.close();
+				}if(ComponentWorkBook != null){
+					ComponentWorkBook.close();
+				}
 			}
 		} else {
-			Reporter.ReportEvent(Constant.Failed);
-			Reporter.ReportEvent(Constant.Callactionff);
+			result="Function not called";
+			Constant.Vars.setExecutionStatus(Constant.Failed);
+			Constant.Vars.setExecutionResult(result);
+			vars.setRes_type(Constant.Failed);
 		}
 	}
+	/**
+	 * @param xWB
+	 * @param tCell
+	 * @return
+	 * Return
+	 */
 	public static String getCellData(XSSFWorkbook xWB, XSSFCell tCell) {
 		String cellStr = null;
 		switch (tCell.getCellType()) {
@@ -1795,53 +2818,61 @@ public class KeywordAction extends KeywordLibrary {
 		return cellStr;
 	}
 
+	/**
+	 * @param vars
+	 * @throws Exception
+	 */
 	public static void context(LocalTC vars) throws Exception {
-		cCellObjName = vars.getObjProp().replace("obj=", "").toLowerCase();
-		cCellObjType = vars.getObj();
-		ObjectSet = vars.getEvent();
-		ObjectSetVal = vars.getTestdata();
+		ObjectName = vars.getObjProp().replace("obj=", "").toLowerCase();
+		ObjectType = vars.getObj();
+		ObjectEvent = vars.getEvent();
+		ObjectTestData = vars.getTestdata();
 		int DTcolumncountCh = 0;
 		String parentWindowHandle = null;
 		int windowFound = 0;
-		// if (ObjectSetVal.startsWith("dt_") || ObjectSetVal.startsWith("#"))
-		int frameindex = 0;
-		/*if (cCellObjType.equalsIgnoreCase("frame") || cCellObjType.equalsIgnoreCase("iframe")) {
-			frameindex = 1;
-		}*/
-		if (cCellObjType.equalsIgnoreCase("frame") || cCellObjType.equalsIgnoreCase("iframe")) {
-			/*if (frameindex == 1) {*/
-			frameindex = 1;
-				driver.switchTo().parentFrame();
-				Reporter.ReportEvent(Constant.Executed);
-				frameindex = 0;
-			if ("default".equals(cCellObjName)) {
-				driver.switchTo().defaultContent();
-				Reporter.ReportEvent(Constant.Executed);
-			} else if (cCellObjName.matches("^[0-9]+") == true) {
-				driver.switchTo().frame(new Integer(cCellObjName));
-				Reporter.ReportEvent(Constant.Executed);
+		if (ObjectType.equalsIgnoreCase("frame") || ObjectType.equalsIgnoreCase("iframe")) {
+			Constant.driver.switchTo().parentFrame();
+			result="Frame Identified";
+			vars.setExecutionStatus(Constant.Passed);
+			vars.setExecutionResult(result);
+			vars.setRes_type(Constant.Executed);
+			if ("default".equals(ObjectName)) {
+				Constant.driver.switchTo().defaultContent();
+				result="Frame Identified";
+				vars.setExecutionStatus(Constant.Passed);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.Executed);
+			} else if (ObjectName.matches("^[0-9]+") == true) {
+				Constant.driver.switchTo().frame(new Integer(ObjectName));
+				result="Frame Identified";
+				vars.setExecutionStatus(Constant.Passed);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.Executed);
 			} else {
-				vars.elem = driver.findElement(vars.obj.getLocator(cCellObjName));
+				vars.elem =  vars.obj.findelement(vars.obj.getLocator(ObjectName));
 				if (vars.elem == null) {
 					return;
 				} else {
-					driver.switchTo().frame(vars.elem);
-					Reporter.ReportEvent(Constant.Executed);
+					Constant.driver.switchTo().frame(vars.elem);
+					result="Frame Identified";
+					vars.setExecutionStatus(Constant.Passed);
+					vars.setExecutionResult(result);
+					vars.setRes_type(Constant.Executed);
 				}
 			}
 		} else {
 			try {
-				if (ObjectSetVal.substring(0, 1).equalsIgnoreCase("#")) {
-					if (vars.map.get(ObjectSetVal.substring(1, (ObjectSetVal.length()))) != null) {
-						ObjectSetVal = vars.map.get(ObjectSetVal.substring(1, (ObjectSetVal.length())));
+				if (ObjectTestData.substring(0, 1).equalsIgnoreCase("#")) {
+					if (vars.map.get(ObjectTestData.substring(1, (ObjectTestData.length()))) != null) {
+						ObjectTestData = vars.map.get(ObjectTestData.substring(1, (ObjectTestData.length())));
 					} else {
-						ObjectSetVal = "";
+						ObjectTestData = "";
 					}
-				} else if (ObjectSetVal.contains("dt_")) {
+				} else if (ObjectTestData.contains("dt_")) {
 					vars.iflag = 0;
-					String ObjectSetValtableheader[] = ObjectSetVal.split("_");
+					String ObjectTestDatatableheader[] = ObjectTestData.split("_");
 					int column = 0;
-					String Searchtext = ObjectSetValtableheader[1];
+					String Searchtext = ObjectTestDatatableheader[1];
 					try {
 						DTcolumncountCh = vars.DTsheet.getColCount();
 
@@ -1850,76 +2881,95 @@ public class KeywordAction extends KeywordLibrary {
 					}
 					for (column = 0; column < DTcolumncountCh; column++) {
 						if (Searchtext.equalsIgnoreCase(vars.DTsheet.getCellData(0, column)) == true) {
-							ObjectSetVal = vars.DTsheet.getCellData(vars.row, column);
+							ObjectTestData = vars.DTsheet.getCellData(vars.row, column);
 							vars.iflag = 1;
-							if (ObjectSetVal.length() == 0) {
-								ObjectSetVal = "";
+							if (ObjectTestData.length() == 0) {
+								ObjectTestData = "";
 							}
 						}
 					}
-					if ((!ObjectSet.equalsIgnoreCase("dialog;"))
-							&& ((ObjectSet.equalsIgnoreCase("page") || ObjectSet.equalsIgnoreCase("page;"))
-									&& !ObjectSetVal.contains("::")
-									|| !ObjectSet.equalsIgnoreCase("page;WindowRtn;"))) {
+					if ((!ObjectEvent.equalsIgnoreCase("dialog;"))
+							&& ((ObjectEvent.equalsIgnoreCase("page") || ObjectEvent.equalsIgnoreCase("page;"))
+									&& !ObjectTestData.contains("::")
+									|| !ObjectEvent.equalsIgnoreCase("page;WindowRtn;"))) {
 						int windowNums = 0;
 						int windowItr = 0;
 						WebDriver newWindow = null;
 						Set<String> al = new HashSet<String>();
-						al = driver.getWindowHandles();
+						al = Constant.driver.getWindowHandles();
 						windowNums = al.size(); // get the number of window
 						Iterator<String> windowIterator = al.iterator();
 						if (windowNums == 1) {
 							// Switch the hundle, if number of available hundle
 							// is 1.
 							String handle = windowIterator.next();
-							driver.switchTo().window(handle);
+							Constant.driver.switchTo().window(handle);
 							// Reset Iterator
 							windowIterator = al.iterator();
 						} else {
 							// save the current window handle.
-							parentWindowHandle = driver.getWindowHandle();
+							parentWindowHandle = Constant.driver.getWindowHandle();
 						}
-						if (driver.getTitle().toString().equalsIgnoreCase(ObjectSetVal) == true) {
-							Reporter.ReportEvent(Constant.Executed);
+						if (Constant.driver.getTitle().toString().equalsIgnoreCase(ObjectTestData) == true) {
+
+							result="Window Identified";
+							vars.setExecutionStatus(Constant.Passed);
+							vars.setExecutionResult(result);
+							vars.setRes_type(Constant.Executed);
 						} else {
-							if (!((ObjectSetVal.equalsIgnoreCase("page") || (ObjectSetVal.equalsIgnoreCase("page;")))
-									|| (ObjectSetVal.toString() == ""))) {
-								if (driver.getTitle().toString().equalsIgnoreCase(ObjectSetVal) == false) {
+							if (!((ObjectTestData.equalsIgnoreCase("page") || (ObjectTestData.equalsIgnoreCase("page;")))
+									|| (ObjectTestData.toString() == ""))) {
+								if (Constant.driver.getTitle().toString().equalsIgnoreCase(ObjectTestData) == false) {
 									for (windowItr = 0; windowItr < windowNums; windowItr++) {
 										String windowHandle = windowIterator.next();
-										newWindow = driver.switchTo().window(windowHandle);
-										if (newWindow.getTitle().toString().equalsIgnoreCase(ObjectSetVal)) {
+										newWindow = Constant.driver.switchTo().window(windowHandle);
+										if (newWindow.getTitle().toString().equalsIgnoreCase(ObjectTestData)) {
 											windowFound = 1;
-											Reporter.ReportEvent(Constant.Executed, ObjectSet, ObjectSetVal);
+											result="Window Identified for " + ObjectEvent + "new window is " +ObjectTestData;
+											vars.setExecutionStatus(Constant.Passed);
+											vars.setExecutionResult(result);
+											vars.setRes_type(Constant.Executed);
 											break;
 										}
 									}
 									if (windowFound != 1) {
-										Reporter.ReportEvent(Constant.NoWindowFound, ObjectSet, ObjectSetVal);
+										result="Window not Identified";
+										vars.setExecutionStatus(Constant.Blocked);
+										vars.setExecutionResult(result);
+										vars.setRes_type(Constant.NoWindowFound);
 									}
 								}
 							} else {
 								if (windowNums == 1) {
-									Reporter.ReportEvent(Constant.Executed);
+									result="Window Identified";
+									vars.setExecutionStatus(Constant.Passed);
+									vars.setExecutionResult(result);
+									vars.setRes_type(Constant.Executed);
+
 								} else {
 									int winItr1 = 0;
 									String windowHandle = null;
 									while (winItr1 != windowNums) {
 										windowHandle = windowIterator.next();
-										System.out.println(windowHandle);
-										newWindow = driver.switchTo().window(windowHandle);
+										newWindow = Constant.driver.switchTo().window(windowHandle);
 										if (parentWindowHandle.equalsIgnoreCase(windowHandle)) {
 											if (winItr1 != windowNums - 1) {
 												windowHandle = windowIterator.next();
-												driver.switchTo().window(windowHandle);
-												Reporter.ReportEvent(Constant.Executed);
+												Constant.driver.switchTo().window(windowHandle);
+												result="Window Identified";
+												vars.setExecutionStatus(Constant.Passed);
+												vars.setExecutionResult(result);
+												vars.setRes_type(Constant.Executed);
 												windowFound = 1;
 												break;
 											} else {
 												Iterator<String> windowIterator1 = al.iterator();
 												windowHandle = windowIterator1.next();
-												driver.switchTo().window(windowHandle);
-												Reporter.ReportEvent(Constant.Executed);
+												Constant.driver.switchTo().window(windowHandle);
+												result="Window Identified";
+												vars.setExecutionStatus(Constant.Passed);
+												vars.setExecutionResult(result);
+												vars.setRes_type(Constant.Executed);
 												windowFound = 1;
 												break;
 											}
@@ -1927,28 +2977,44 @@ public class KeywordAction extends KeywordLibrary {
 										winItr1++;
 									}
 									if (windowFound != 1) {
-										Reporter.ReportEvent(Constant.NoWindowFound);
+										result="Window not Identified";
+										vars.setExecutionStatus(Constant.Blocked);
+										vars.setExecutionResult(result);
+										vars.setRes_type(Constant.NoWindowFound);
 									}
 								}
 							}
-
 						}
-					} else if (ObjectSet.equalsIgnoreCase("page;WindowRtn;")) {
-						driver.switchTo().window(parentWindowHandle);
-						Reporter.ReportEvent(Constant.Executed);
+					} else if (ObjectEvent.equalsIgnoreCase("page;WindowRtn;")) {
+						Constant.driver.switchTo().window(parentWindowHandle);
+						result="Window Identified";
+						vars.setExecutionStatus(Constant.Passed);
+						vars.setExecutionResult(result);
+						vars.setRes_type(Constant.Executed);
 					}
-					if ((ObjectSet.equalsIgnoreCase("dialog") || ObjectSet.equalsIgnoreCase("dialog;"))) {
-						driver.switchTo().alert();
-						Reporter.ReportEvent(Constant.Executed);
+					if ((ObjectEvent.equalsIgnoreCase("dialog") || ObjectEvent.equalsIgnoreCase("dialog;"))) {
+						Constant.driver.switchTo().alert();
+						result="Dialog box Identified";
+						vars.setExecutionStatus(Constant.Passed);
+						vars.setExecutionResult(result);
+						vars.setRes_type(Constant.Executed);
 					}
 				}
 			} catch (Exception e) {
-				Reporter.ReportEvent(Constant.Failed, e);
+				result="Dialog box not Identified" + e.getMessage();
+				vars.setExecutionStatus(Constant.Failed);
+				vars.setExecutionResult(result);
+				vars.setRes_type(Constant.Failed);
+				vars.setExceptionVar(e.toString());
 			}
 
 		}
 	}
-	public static String testObjectSetValue(String source) {
+	/**
+	 * @param source
+	 * @return
+	 */
+	public static String testObjectTestData(String source) {
 		Pattern pt = Pattern.compile(",|and",Pattern.CASE_INSENSITIVE);
 		Matcher mt = pt.matcher(source);
 		String returnValue = null;
@@ -1959,12 +3025,123 @@ public class KeywordAction extends KeywordLibrary {
 				returnValue = mt.group(0);
 			return returnValue;
 		}
-			
+
 		else {
 			return null;
 		}
 	}
+
+	/**
+	 * @param Vars
+	 * @throws Exception
+	 * extract data from the given string and store it into map
+	 */
+	public static void extract(LocalTC Vars) throws Exception {
+		String strObjProp = Vars.getObjProp().replace("#", "");
+		String strObj = Vars.getObj().replace("#", "");
+		String strTestData = Vars.getTestdata().replace("regex:", "");
+		String strText = "";
+		String strNumber = "";
+		try {
+			if (null != strObj) {
+				strText = Vars.map.get(strObj);
+				Pattern pt = Pattern.compile(strTestData, Pattern.CASE_INSENSITIVE);
+				Matcher mt = null;
+				if (!strText.isEmpty()) {
+					mt = pt.matcher(strText);
+				}
+				if (mt.find()) {
+					strNumber = mt.group(0);
+				}else{
+					result = "Number not found in " +strText;
+					Vars.setExecutionStatus(Constant.Failed);
+					Vars.setExecutionResult(result);
+					screenShot(Vars);
+					Vars.setRes_type(Constant.Failed);
+				}
+				
+			}
+			if (null != strObjProp) {
+				Vars.map.put(strObjProp, strNumber);
+				result = strNumber + " has been extracted and store into " +strObjProp;
+				Vars.setExecutionStatus(Constant.Passed);
+				Vars.setExecutionResult(result);
+				screenShot(Vars);
+				Vars.setRes_type(Constant.Executed);
+			}
+		
+		} catch (Exception ex) {
+			result = "error in Extract text";
+			Vars.setExecutionStatus(Constant.Failed);
+			Vars.setExecutionResult(result);
+			screenShot(Vars);
+			Vars.setRes_type(Constant.Failed);
+		}
+
+	}
+	/**
+	 * @param Vars
+	 * @throws Exception
+	 * Verifying the data from the file (pdf, xls. csv)
+	 */
+	public static void verifyData(LocalTC Vars) throws Exception{
+		String objectType = Vars.getObj();     
+		String ObjectValCh = Vars.getObjProp();
+		String ObjectEventCh = Vars.getEvent();                             
+		String ObjectTestDataCh = Vars.getTestdata();
+		boolean bflag = false;
+		int col = 0,row = 0;
+		if(objectType.contains("column")){
+			col = Integer.parseInt(objectType.split(" ")[1].trim()); 
+		}
+		if(objectType.contains("row")){
+			row = Integer.parseInt(objectType.split(" ")[1].trim()); 
+		}
+		if (ObjectEventCh.contains("#") && Vars.map.get(ObjectEventCh.substring(1,(ObjectEventCh.length()))) != null) {
+			ObjectEventCh = Vars.map.get(ObjectEventCh.substring(1,(ObjectEventCh.length())));
+		}
+		if (ObjectValCh.contains("#") && Vars.map.get(ObjectValCh.substring(1,(ObjectValCh.length()))) != null) {
+			ObjectValCh = Vars.map.get(ObjectValCh.substring(1,(ObjectValCh.length())));
+		}
+		bflag = ExcelUtils.readDataFromFile(ObjectTestDataCh, row, col, ObjectEventCh, ObjectValCh);
+		if(bflag){
+			result = "Object found from file";
+			Vars.setExecutionStatus(Constant.Passed);
+			Vars.setExecutionResult(result);
+			screenShot(Vars);
+			Vars.setRes_type(Constant.Executed);	
+		}else{
+			result = "object not found from sheet";
+			Vars.setExecutionStatus(Constant.Failed);
+			Vars.setExecutionResult(result);
+			screenShot(Vars);
+			Vars.setRes_type(Constant.Failed);
+		}
+	}
+	/**
+	 * @param Vars
+	 * @throws Exception
+	 * swapping words and storing into variable
+	 */
+	public static void swap(LocalTC Vars) throws Exception {
+		String objectType = Vars.getObj().replace("#", "");
+		String ObjectValCh = Vars.getObjProp();
+		String strSwapValue = "";
+		if (ObjectValCh.contains("#")) {
+			ObjectValCh = Vars.map.get(ObjectValCh.substring(1, (ObjectValCh.length())));
+		}
+		String strSwap[] = ObjectValCh.split(" ");
+		for (int i = strSwap.length - 1; i>=0; i--) {
+			if (strSwapValue.isEmpty())
+				strSwapValue = strSwapValue + strSwap[i];
+			else
+				strSwapValue = strSwapValue + ", " + strSwap[i];
+		}
+		Vars.map.put(objectType, strSwapValue);
+		result = "Object has been swap and store into " + objectType;
+		Vars.setExecutionStatus(Constant.Passed);
+		Vars.setExecutionResult(result);
+		screenShot(Vars);
+		Vars.setRes_type(Constant.Executed);
+	}
 }
-
-
-

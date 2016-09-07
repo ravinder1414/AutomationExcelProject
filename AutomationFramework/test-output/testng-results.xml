@@ -2,40 +2,40 @@
 <testng-results skipped="0" failed="0" total="1" passed="1">
   <reporter-output>
   </reporter-output>
-  <suite name="IgniteSuite" duration-ms="49276" started-at="2016-06-17T09:59:54Z" finished-at="2016-06-17T10:00:43Z">
+  <suite name="IgniteSuite" duration-ms="544282" started-at="2016-09-06T11:56:10Z" finished-at="2016-09-06T12:05:14Z">
     <groups>
     </groups>
-    <test name="IgniteTest" duration-ms="49276" started-at="2016-06-17T09:59:54Z" finished-at="2016-06-17T10:00:43Z">
+    <test name="IgniteTest" duration-ms="544282" started-at="2016-09-06T11:56:10Z" finished-at="2016-09-06T12:05:14Z">
       <class name="automationFramework.FrameworkDriver">
-        <test-method status="PASS" signature="beforeSuite()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="beforeSuite" is-config="true" duration-ms="100" started-at="2016-06-17T15:29:54Z" finished-at="2016-06-17T15:29:54Z">
+        <test-method status="PASS" signature="beforeSuite()[pri:0, instance:automationFramework.FrameworkDriver@614c5515]" name="beforeSuite" is-config="true" duration-ms="12" started-at="2016-09-06T17:26:10Z" finished-at="2016-09-06T17:26:10Z">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- beforeSuite -->
-        <test-method status="PASS" signature="loadLocally(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String)[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="loadLocally" is-config="true" duration-ms="2" started-at="2016-06-17T15:29:54Z" finished-at="2016-06-17T15:29:54Z">
+        <test-method status="PASS" signature="loadLocally(java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String)[pri:0, instance:automationFramework.FrameworkDriver@614c5515]" name="loadLocally" is-config="true" duration-ms="9" started-at="2016-09-06T17:26:10Z" finished-at="2016-09-06T17:26:10Z">
           <params>
             <param index="0">
               <value>
-                <![CDATA[75]]>
+                <![CDATA[30]]>
               </value>
             </param>
             <param index="1">
               <value>
-                <![CDATA[135]]>
+                <![CDATA[1031]]>
               </value>
             </param>
             <param index="2">
               <value>
-                <![CDATA[230]]>
+                <![CDATA[C:\\temp\\Report]]>
               </value>
             </param>
             <param index="3">
               <value>
-                <![CDATA[23098]]>
+                <![CDATA[23097]]>
               </value>
             </param>
             <param index="4">
               <value>
-                <![CDATA[C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Testtest.xlsx]]>
+                <![CDATA[C:\\Users\\ravinder.kumar\\git\\automationframework\\AutomationFramework\\src\\testData\\Reports_Candidates_Documents_Checked_9.xlsx]]>
               </value>
             </param>
             <param index="5">
@@ -47,19 +47,19 @@
           <reporter-output>
           </reporter-output>
         </test-method> <!-- loadLocally -->
-        <test-method status="PASS" signature="init()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="init" is-config="true" duration-ms="1067" started-at="2016-06-17T15:29:54Z" finished-at="2016-06-17T15:29:55Z">
+        <test-method status="PASS" signature="init()[pri:0, instance:automationFramework.FrameworkDriver@614c5515]" name="init" is-config="true" duration-ms="1233" started-at="2016-09-06T17:26:10Z" finished-at="2016-09-06T17:26:11Z">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- init -->
-        <test-method status="PASS" signature="StartTest()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="StartTest" duration-ms="48194" started-at="2016-06-17T15:29:55Z" finished-at="2016-06-17T15:30:43Z">
+        <test-method status="PASS" signature="StartTest()[pri:0, instance:automationFramework.FrameworkDriver@614c5515]" name="StartTest" duration-ms="542980" started-at="2016-09-06T17:26:11Z" finished-at="2016-09-06T17:35:14Z">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- StartTest -->
-        <test-method status="PASS" signature="afterMethod()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="afterMethod" is-config="true" duration-ms="1" started-at="2016-06-17T15:30:43Z" finished-at="2016-06-17T15:30:43Z">
+        <test-method status="PASS" signature="afterMethod()[pri:0, instance:automationFramework.FrameworkDriver@614c5515]" name="afterMethod" is-config="true" duration-ms="47" started-at="2016-09-06T17:35:14Z" finished-at="2016-09-06T17:35:14Z">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- afterMethod -->
-        <test-method status="PASS" signature="tearDown()[pri:0, instance:automationFramework.FrameworkDriver@357246de]" name="tearDown" is-config="true" duration-ms="604" started-at="2016-06-17T15:30:43Z" finished-at="2016-06-17T15:30:44Z">
+        <test-method status="PASS" signature="tearDown()[pri:0, instance:automationFramework.FrameworkDriver@614c5515]" name="tearDown" is-config="true" duration-ms="2902" started-at="2016-09-06T17:35:14Z" finished-at="2016-09-06T17:35:17Z">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- tearDown -->

@@ -15,6 +15,10 @@ package automationFramework;
  *		Integration - args[5]
  *Functions			: public static void main(String[] args) - Validates the argument count and then create a Dynamic TestNG XML 
  *					  to run the test from FrameworkDriver class 
+ *1. TestAction
+ *1a. Log.java
+ *2. Framework Driver
+ *
  * ********************************************************************************************************
  */
 
@@ -24,6 +28,9 @@ import java.util.List;
 import java.util.Map;
 
 import appModules.functionLibary;
+import utility.Log;
+
+import org.apache.log4j.xml.DOMConfigurator;
 import org.testng.ITestResult;
 import org.testng.TestListenerAdapter;
 import org.testng.TestNG;
@@ -44,17 +51,19 @@ public class TestAction
 		for (String s: args) {
 			arg = arg + " <" + s + ">";
         }
-		System.out.println(arg);
+		//Provide Log4j configuration settings
+		DOMConfigurator.configure("log4j.xml");
+		Log.info(arg);
 		
 		/****************Create a TestNG XML at runtime by passing the command line variables to TestNG**************/
 		//Set Suite Name in XML
 		XmlSuite suite = new XmlSuite();
 		suite.setName("IgniteSuite");
-		System.out.println("added xml suite");
+		Log.info("added xml suite");
 		//Set Test name in XML
 		XmlTest test = new XmlTest(suite);
 		test.setName("IgniteTest");
-		System.out.println("added xml test");
+		Log.info("added xml test");
 		//Add Parameters to the XML
 		Map<String, String> parameters = new HashMap<String, String>();
 	    parameters.put("ProjectID",args[0]);
@@ -63,9 +72,9 @@ public class TestAction
 	    parameters.put("TestCaseID",args[3]);
 	    parameters.put("TestRunPath",args[4]);
 	    parameters.put("Integration",args[5]);
-	    System.out.println("added xml parameters");
+	    Log.info("added xml parameters");
 	    test.setParameters(parameters);
-	    System.out.println("added xml parameters to xml");
+	    Log.info("added xml parameters to xml");
   	    //Add Class name in xml
 		List<XmlClass> myclasses = new ArrayList<XmlClass>(); //List of XMLClass
 		String classname="automationFramework.FrameworkDriver";
@@ -78,7 +87,7 @@ public class TestAction
 		 suite.setTests(myTests);
 
 		/************************************************************************************************************/
-		System.out.println("Created a dynamic XML using parameters");
+		Log.info("Created a dynamic XML using parameters");
 		/****************Calling Framework to execute test for this test case ****************************************/
 		//TestListenerAdapter tla = new TestListenerAdapter();
 		List<XmlSuite> suites = new ArrayList<XmlSuite>();
@@ -87,7 +96,7 @@ public class TestAction
 		testng.setXmlSuites(suites);
 		//testng.setTestClasses(new Class[] { FrameworkDriver.class });
 		//testng.addListener(tla);
-		System.out.println("Starting IgniteFramework to execute test");
+		Log.info("Starting IgniteFramework to execute test");
 		testng.run();
 		/*************************************************************************************************************/
 	}

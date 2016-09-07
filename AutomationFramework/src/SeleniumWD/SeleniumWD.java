@@ -518,21 +518,16 @@ public class SeleniumWD {
 			System.out
 			.println("The format of Utility file is not a correct one. Give the correct (Xlsx) Format of Utility File.");
 			Log.info( "The format of Utility file is not a correct one. Give the correct (Xlsx) Format of Utility File");
-			System.out.println(ex.getMessage());
+			Log.info(ex.getMessage());
 			return;
 		} catch (Exception e) {
-			System.out.println(e.getMessage());
 			Log.info( e.getMessage());
-
-		}
+	}
 		try {
 
 			setBrowser(browserName);
 
 		} catch (Exception e) {
-			System.out
-			.println("Could not launch the Browser. Check the browser settings");
-
 			Log.info( "Could not launch the Browser. Check the browser settings");
 			return;
 		}
@@ -540,9 +535,7 @@ public class SeleniumWD {
 			findExecTestscript(testSuite, testScript, objectRepository);
 
 		} catch (Exception e) {
-			System.out.println("Error Occured in FindExecTestscript function "+e.getMessage());
 			Log.info( "Error Occured in FindExecTestscript function "+e.getMessage());
-
 		}
 
 	}
@@ -552,7 +545,7 @@ public class SeleniumWD {
 
 	private  String createConnection(String database, String schemaName, String username,String password) 
 	{
-		System.out.println(" I am in createconnection");
+		Log.info(" I am in createconnection");
 		String url1=null;
 		try {
 			if(database.equalsIgnoreCase("mysql")){
@@ -576,7 +569,7 @@ public class SeleniumWD {
 				return url;
 			}
 			else{
-				System.out.println(database+" is not handeled as database in this version of  framework");
+				Log.info(database+" is not handeled as database in this version of  framework");
 				Reporter.ReportEvent("missing");
 				if (captureperform == true) {
 					screenShot(loopnum, TScrowcount, TScname);
@@ -591,11 +584,8 @@ public class SeleniumWD {
 					screenShot(loopnum, TScrowcount, TScname);
 				}
 			} catch (IOException e1) {
-				System.out.println("Invalid Connection  "+e1.getMessage());
 				Log.info( "Invalid Connection  "+e1.getMessage());
-
 			} catch (Exception e2) {
-				System.out.println("Error Occured in Reporter.ReportEvent Function "+e2.getMessage());
 				Log.info( "Error Occured in Reporter.ReportEvent Function "+e2.getMessage());
 			}
 		} 
@@ -622,7 +612,7 @@ public class SeleniumWD {
 				return isconnected;
 
 			}else if(database.equalsIgnoreCase("mysql")){
-				System.out.println("In get connection part of MSSQL");
+				Log.info("In get connection part of MSSQL");
 				con=DriverManager.getConnection(url, username, password);
 				stmt=con.createStatement();
 				rs=stmt.executeQuery(sqlquery);
@@ -635,13 +625,8 @@ public class SeleniumWD {
 
 			errorString = e;
 			Log.info( "Connection to Database is failed, please verify connection URL parameters which are set in Selenium Utility File  "+e.getMessage());
-			System.out.println("Connection to Database is failed, please verify connection URL parameters which are set in Selenium Utility File  "+e.getMessage());
 			return isconnected;
-
-
 		}
-
-
 	}
 
 
@@ -653,17 +638,15 @@ public class SeleniumWD {
 		boolean result=false; 
 
 		if(!file.exists()){
-			System.out.println("Creating Directory - "+file);;
+			Log.info("Creating Directory - "+file);;
 			try{
 				file.mkdir();
 				result = true;
 			}catch(SecurityException se){
-				System.out.println(se.getMessage());
 				Log.info( "SecurityException Error Occured in executeQuery  "+se.getMessage());
 			}
 		}
 		if(result){
-			System.out.println("Direcotry is already Created");
 			Log.info( "Direcotry is already Created");
 		}
 
@@ -691,9 +674,9 @@ public class SeleniumWD {
 
 
 			if (!resultfile.endsWith(".xlsx")){
-				System.out.println("Please correct Excel file extension, Data can be exported to only .xlsx file");
+				Log.info("Please correct Excel file extension, Data can be exported to only .xlsx file");
 				Log.info( "Exception occured in executeQuery Please correct Excel file extension, Data can be exported to only .xlsx file");
-				System.out.println("nofetchdata");
+				Log.info("nofetchdata");
 			}else{
 
 				rs.beforeFirst(); 
@@ -756,13 +739,8 @@ public class SeleniumWD {
 
 				} catch (IOException e) {
 					Log.info( "IO Exception Occured in executeQuery -  while Writing data into Excel"+e.getMessage());
-					System.out.println("IO Exception Occured, while Writing data into Excel "+e);
-
 				}
-
-
 			}	
-
 		} catch (SQLException e) {
 			System.out.println(" SQLException occured in connection with DB, check your credentials are correct "+e);
 			Log.info( " SQLException occured in executeQuery -  while connection with DB, check your credentials are correct "+e.getMessage());
@@ -775,7 +753,7 @@ public class SeleniumWD {
 
 	public void setBrowser(String BrowserType) {
 		try {
-			System.out.println(BrowserType);
+			Log.info(BrowserType);
 
 			switch (BrowserType.toUpperCase()) {
 			case "IE":
@@ -805,12 +783,9 @@ public class SeleniumWD {
 
 			default:
 				Log.info( "Error : Invalid browser type");
-				System.out.println("Error : Invalid browser type");
 			}
 		} catch (Exception e1) {
 			Log.info( "Error :Check the Test Suite file contents"+e1.getMessage());
-			System.out.println("Check the Test Suite file contents");
-			System.out.println(e1);
 		}
 	}
 
@@ -825,9 +800,6 @@ public class SeleniumWD {
 			try {
 				fs = new FileInputStream(new File(TestSuite));
 			} catch (Exception e) {
-				System.out
-				.println("No proper TestSuite is defined in Selenium Utility file. Give the correct TestSuite name");
-				System.out.println(e);
 				Log.info( "Error :No proper TestSuite is defined in Selenium Utility file. Give the correct TestSuite name"+e.getMessage());
 				return;
 			}
@@ -852,9 +824,6 @@ public class SeleniumWD {
 			}
 
 			strResultPath = rp + "Log";
-			System.out.println();
-
-
 			String htmlname1 = rp + "Log" + "Test_Suite_" + strTimeStamp
 					+ ".html";
 			File f = new File(strResultPath);
@@ -862,7 +831,7 @@ public class SeleniumWD {
 				System.out
 				.println("Report will be printed in the following path since THE REPORT PATH WAS NOT GIVEN / THE GIVEN PATH IS INCORRECT.");
 				Log.info( "WARNING :Report will be printed in the following path since THE REPORT PATH WAS NOT GIVEN / THE GIVEN PATH IS INCORRECT." );
-				System.out.println(f.getAbsolutePath().toString());
+				Log.info(f.getAbsolutePath().toString());
 			}
 			f.mkdirs();
 			bw1 = new BufferedWriter(new FileWriter(htmlname1));
@@ -897,7 +866,7 @@ public class SeleniumWD {
 							runscript=false;
 
 							String ScriptName = cell.getStringCellValue();
-							System.out.println(" ScriptName  "+ScriptName);
+							Log.info(" ScriptName  "+ScriptName);
 
 							if(!ScriptName.endsWith(".xlsx")){
 
@@ -915,15 +884,11 @@ public class SeleniumWD {
 								execKeywordScript(ScriptName, TestScript,
 										ObjectRepository);
 							}catch(Exception ex){
-								System.out.println("Function can not called   "+ex.getMessage());
 								Log.info( "Function can not called   "+ex.getMessage() );
-
 								Log.info( "Invalid File: "
 										+ ScriptName
 										+ "is not available.Give the correct TestScript" );
-
-								System.out
-								.println("Invalid File:"
+								System.out.println("Invalid File:"
 										+ ScriptName
 										+ " is not available.Give the correct TestScript");
 							}
@@ -983,10 +948,7 @@ public class SeleniumWD {
 			fs.close();
 
 		}catch(Exception e1){
-			System.out.println("Error Occured in FindExecTestscript function "+e1.getMessage());
 			Log.info( "Error Occured in FindExecTestscript function  "+e1.getMessage() );
-
-
 			bw1.close();
 		}
 	}
@@ -994,61 +956,43 @@ public class SeleniumWD {
 
 	public void execKeywordScript(String scriptName, String TestScript,
 			String ObjectRepository) throws Exception
-
 	{
-
 		FileInputStream fs2 = null;
 		int cCellDatanum =0;
 		// Report header
 		cur_dt = new Date();
 		DateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
 		String strTimeStamp = dateFormat.format(cur_dt);
-
 		if (reportsPath == "") {
-
 			reportsPath = tempTestReportPath;
 		}
-
 		if (!reportsPath.endsWith("\\"))
-
 		{
-
 			reportsPath = reportsPath + "\\";
 		}
 		TCNm = scriptName.split("\\.");
 		strResultPath = reportsPath + "Log" + "\\" + TCNm[0] + "\\";
 		String htmlname = reportsPath + "Log" + "\\" + TCNm[0] + "\\"
 				+ strTimeStamp + ".html";
-
 		reportsFolder = reportsPath + "Log" + "\\" + TCNm[0] + "\\";
-
 
 		// 2016-03-28 A pass of a reference previous HTML was corrected in a relative path.
 		DetailReport = ".\\Log" + "\\" + TCNm[0] + "\\"
 				+ strTimeStamp + ".html";
 
 		screenReport = screenReport.substring(0, screenReport.length()-1);
-
 		ScreenshotPath=screenReport+"\\"+TCNm[0];
-
-
-
 		File f = new File(strResultPath);
 		f.mkdirs();
 		bw = new BufferedWriter(new FileWriter(htmlname));
 		bw.write("<HTML><BODY><TABLE BORDER=0 CELLPADDING=3 CELLSPACING=1 WIDTH=100%>");
 		bw.write("<TABLE BORDER=0 BGCOLOR=BLACK CELLPADDING=3 CELLSPACING=1 WIDTH=100%>");
-
 		bw.write("<TR><TD BGCOLOR=#66699 WIDTH=27%>"
 				+ "<FONT FACE=VERDANA COLOR=WHITE SIZE=2><B>Test Case Name:</B></FONT></TD>"
 				+ "<TD COLSPAN=6 BGCOLOR=#66699><FONT FACE=VERDANA COLOR=WHITE SIZE=2><B>"
 				+"<a href=\"file:///"+ScreenshotPath+"\">"+ TCNm[0] + "</a>"+"</B></FONT></TD></TR>");
 
-
-
-
 		bw.write("<HTML><BODY><TABLE BORDER=1 CELLPADDING=3 CELLSPACING=1 WIDTH=100%>");
-
 
 		bw.write("<TR COLS=7><TD BGCOLOR=#FFCC99 WIDTH=3%><FONT FACE=VERDANA COLOR=BLACK SIZE=2><B>Row</B></FONT></TD>"
 				+ "<TD BGCOLOR=#FFCC99  WIDTH=3%><FONT FACE=VERDANA COLOR=BLACK SIZE=2><B>Keyword</B></FONT></TD>"
@@ -1058,14 +1002,8 @@ public class SeleniumWD {
 				+ "<TD BGCOLOR=#FFCC99 WIDTH=25%><FONT FACE=VERDANA COLOR=BLACK SIZE=2><B>Execution Time</B></FONT></TD>"
 				+ "<TD BGCOLOR=#FFCC99 WIDTH=5%><FONT FACE=VERDANA COLOR=BLACK SIZE=2><B>Status</B></FONT></TD>");
 
-
-
-
-
-
 		exeStatus = "Pass";
 		String scriptPath = TestScript + scriptName;
-
 
 		TScname = scriptName;
 
@@ -1078,32 +1016,22 @@ public class SeleniumWD {
 
 		FormulaEvaluator evaluator = TScworkbook.getCreationHelper().createFormulaEvaluator();
 
-
-
 		TScrowcount = TScsheet.getLastRowNum();
 		rowcnt = 0;
 
 		for (j = 0; j < TScrowcount; j++)
-
 		{
 			rowcnt = rowcnt + 1;
 			String TSvalidate = "r";
-
 			if((TScsheet.getRow(j).getCell(0).getStringCellValue().equalsIgnoreCase(TSvalidate)==true))	{
-
 				try{
 					Action =TScsheet.getRow(j).getCell(1).getStringCellValue();
-
-
 					if(TScsheet.getRow(j).getCell(2).getCellType()== XSSFCell.CELL_TYPE_STRING)   {
 						cCellData = TScsheet.getRow(j).getCell(2).getStringCellValue();  
 					}
 					else     if(TScsheet.getRow(j).getCell(2).getCellType()== XSSFCell.CELL_TYPE_NUMERIC)  {                                                                                                                                  
-
 						waitcCellDatanum =(int) TScsheet.getRow(j).getCell(2).getNumericCellValue();
 						cCellData = Integer.toString(waitcCellDatanum);
-
-
 					}
 					else     if(TScsheet.getRow(j).getCell(2).getCellType()== XSSFCell.CELL_TYPE_FORMULA)  {                                                                                                                                  
 
@@ -2932,8 +2860,7 @@ public class SeleniumWD {
 								Reporter.ReportEvent("executed", ObjectSetCh,
 										ObjectSetValCh);
 							}
-							System.out
-							.println("Overwriting the value of the variable "
+							Log.info("Overwriting the value of the variable "
 									+ varname
 									+ " to store the value as mentioned in the test case row number"
 									+ rowcnt);
@@ -2945,8 +2872,7 @@ public class SeleniumWD {
 								Reporter.ReportEvent("executed", ObjectSetCh,
 										ObjectSetValCh);
 							}
-							System.out
-							.println("Overwriting the value of the variable "
+							Log.info("Overwriting the value of the variable "
 									+ varname
 									+ " to store the value as mentioned in the test case row number"
 									+ rowcnt);

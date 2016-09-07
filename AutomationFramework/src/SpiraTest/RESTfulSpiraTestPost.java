@@ -11,8 +11,9 @@ import java.net.URL;
 public class RESTfulSpiraTestPost {
 
 	// http://www.inflectra.com/SpiraDemo/Services/v4_0/RestService.svc/projects/75
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException {
 
+		OutputStream os = null;
 	  try {
 
 		URL url = new URL("http://www.inflectra.com/SpiraDemo/Services/v4_0/RestService.svc/projects/75");
@@ -23,7 +24,7 @@ public class RESTfulSpiraTestPost {
 
 		String input = "{\"qty\":100,\"name\":\"iPad 4\"}";
 
-		OutputStream os = conn.getOutputStream();
+		os = conn.getOutputStream();
 		os.write(input.getBytes());
 		os.flush();
 
@@ -51,7 +52,11 @@ public class RESTfulSpiraTestPost {
 
 		e.printStackTrace();
 
-	 }
+	 }finally {
+		if(os != null){
+			os.close();
+		}
+	}
 
 	}
 

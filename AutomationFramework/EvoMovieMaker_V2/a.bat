@@ -1,0 +1,1 @@
+EvoMovieMaker "C:\tempImg\V2\a12.avi" "C:\tempImg\V2"
